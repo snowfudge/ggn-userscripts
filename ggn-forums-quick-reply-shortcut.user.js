@@ -5,7 +5,7 @@
 // @description  Submit a quick reply using Ctrl + Enter
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
-// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-quick-reply-shortcut.js
+// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-quick-reply-shortcut.user.js
 // @match        https://gazellegames.net/forums.php?*action=viewthread&threadid=*
 // ==/UserScript==
 

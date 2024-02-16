@@ -5,7 +5,7 @@
 // @description  Submit an edited post using Ctrl + Enter
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
-// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-quick-edit-shortcut.js
+// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-quick-edit-shortcut.user.js
 // @match        https://gazellegames.net/forums.php?*action=viewthread&threadid=*
 // ==/UserScript==
 

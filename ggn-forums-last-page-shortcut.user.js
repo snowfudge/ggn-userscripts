@@ -5,7 +5,7 @@
 // @description  Go to the last page in a thread using Ctrl + ]
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
-// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-last-page-shortcut.js
+// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-last-page-shortcut.user.js
 // @match        https://gazellegames.net/forums.php?*action=viewthread&threadid=*
 // ==/UserScript==
 

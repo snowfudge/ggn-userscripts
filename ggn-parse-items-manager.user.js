@@ -5,7 +5,7 @@
 // @description  Adds a parse data button to translate advanced strings on the items manager page
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
-// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-parse-items-manager.js
+// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-parse-items-manager.user.js
 // @match        https://gazellegames.net/tools.php?action=items&item=*
 // @grant        GM.getValue
 // @grant        GM.setValue

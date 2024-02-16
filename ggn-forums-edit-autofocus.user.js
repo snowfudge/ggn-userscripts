@@ -5,7 +5,7 @@
 // @description  Autofocus on the textarea when editing a post
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
-// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-edit-autofocus.js
+// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-edit-autofocus.user.js
 // @match        https://gazellegames.net/forums.php?*action=viewthread&threadid=*
 // ==/UserScript==
 
