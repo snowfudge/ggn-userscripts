@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Parse Data on Items Manager
 // @namespace    https://gazellegames.net/
-// @version      1.0
+// @version      1.1
 // @description  Adds a parse data button to translate advanced strings on the items manager page
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -11,10 +11,11 @@
 // @grant        GM.setValue
 // @grant        GM.deleteValue
 // @require      https://cdnjs.cloudflare.com/ajax/libs/he/1.2.0/he.min.js
+// @require      https://unpkg.com/imask
 // ==/UserScript==
 
 (async function () {
-  "use strict";
+  ("use strict");
 
   let apiKey = await GM.getValue("apiKey");
 
@@ -41,42 +42,170 @@
     },
   };
 
-  // If no item name exist, stop here
-  if (!document.getElementById("name").value) return;
+  const packContentsTable = document.getElementById("pack");
+  const rawPackContent = document.getElementById("packadvanced").value;
 
-  const advancedEditor = document.getElementById("packadvanced");
-  const packTable = document.getElementById("pack");
-  let rawPackContent = advancedEditor.value;
+  let parseDataBtn, parsedTextArea;
+  let parsedContent, parsedItems;
+  let userChanceBuff;
 
-  // Will only work on those item packs with advanced editor showing
-  if (rawPackContent) {
-    // Create new row to display pack content table
-    const contentRow = packTable.insertRow(3);
-    let contentRowCell1 = contentRow.insertCell(0);
-    let contentRowCell2 = contentRow.insertCell(1);
+  const createParseDataRow = () => {
+    const row = packContentsTable.insertRow(3);
+    const cell1 = row.insertCell(0);
+    const cell2 = row.insertCell(1);
 
-    contentRowCell1.style = "padding: 10px";
-    contentRowCell1.textContent = "Pack Content";
+    cell1.style = "padding: 10px";
+    cell1.textContent = "Pack Content";
 
-    // Create button to trigger fetching data
-    let button = document.createElement("button");
-    button.id = "parsedata";
+    cell2.id = "parsed_pack_content";
+    cell2.style = "padding: 10px 0";
+    cell2.colSpan = 3;
+  };
+
+  const createParseDataBtn = () => {
+    const button = document.createElement("button");
+    button.id = "parse_data";
     button.textContent = "Parse Data";
     button.type = "button";
     button.style = "padding: 10px; height: auto; display: block;";
-    button.addEventListener("click", getPackContent);
+    button.addEventListener("click", parseData);
 
-    contentRowCell2.id = "packcontent";
-    contentRowCell2.style = "padding: 10px 0";
-    contentRowCell2.colSpan = 3;
-    contentRowCell2.appendChild(button);
-  }
+    // Assign to global variable
+    parseDataBtn = button;
 
-  async function getPackContent() {
-    // Prevent double clicking!
-    const parseDataButton = document.getElementById("parsedata");
-    parseDataButton.disabled = true;
+    document.getElementById("parsed_pack_content").appendChild(button);
+  };
 
+  const createParsedContentArea = () => {
+    // Create text area to display pack content
+    const textarea = document.createElement("textarea");
+
+    textarea.class = "wide_text";
+    textarea.style =
+      "line-height: 1.6; box-sizing: border-box; padding: 5px; width: 99%;";
+    textarea.style.display = "none";
+    textarea.rows = 8;
+    textarea.setAttribute("readonly", true);
+
+    // Assign to global variable
+    parsedTextArea = textarea;
+
+    document.getElementById("parsed_pack_content").appendChild(textarea);
+  };
+
+  const createChanceRow = () => {
+    const row = packContentsTable.insertRow(4);
+    let cell1 = row.insertCell(0);
+    let cell2 = row.insertCell(1);
+
+    cell1.style = "padding: 0 0 10px; text-align: center;";
+    cell1.textContent = "Chance Buff";
+
+    cell2.id = "chance_buff";
+    cell2.style = "padding: 0 0 10px";
+    cell2.colSpan = 3;
+  };
+
+  const createChanceInput = () => {
+    const input = document.createElement("input");
+    input.id = "chance_input";
+    input.value = 1;
+    input.style = "margin-left: 5px; width: 50px;";
+    input.type = "text";
+
+    const mask = IMask(input, {
+      mask: Number,
+      radix: ".",
+      mapToRadix: [","],
+      min: 1,
+      max: 10,
+      autofix: true,
+    });
+
+    input.addEventListener("blur", function () {
+      if (!this.value) this.value = 1;
+      mask.updateValue();
+    });
+
+    document.getElementById("chance_buff").append(input);
+  };
+
+  const createChanceSimulateBtn = () => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.style = "margin-left: 10px;";
+    button.innerHTML = "Go";
+
+    button.addEventListener("click", simulateChance);
+
+    document.getElementById("chance_buff").appendChild(button);
+  };
+
+  const simulateChance = () => {
+    const chanceValue = document.getElementById("chance_input").value;
+    const parsedValue = parseFloat(chanceValue).toFixed(2);
+    parsePercentage(parsedValue);
+  };
+
+  const createShopLinksRow = () => {
+    const row = packContentsTable.insertRow(5);
+    let cell1 = row.insertCell(0);
+    let cell2 = row.insertCell(1);
+
+    cell1.style = "padding: 0 0 25px; text-align: center;";
+    cell1.textContent = "Shop Links";
+
+    cell2.id = "shop_links";
+    cell2.style = "padding: 0 0 25px";
+    cell2.colSpan = 3;
+  };
+
+  const createShopLinks = () => {
+    const shop_link_cell = document.getElementById("shop_links");
+
+    const list = document.createElement("ul");
+    list.style =
+      "list-style: inside; list-style-type: none; padding-left: 5px;";
+
+    parsedItems.forEach((item) => {
+      const li = document.createElement("li");
+      const a = document.createElement("a");
+
+      const itemId = item.id.replace(/^0+/, "");
+
+      a.target = "_blank";
+      a.textContent = `${itemId}. ${he.decode(item.name)}`;
+      a.href = `/shop.php?ItemID=${itemId}`;
+
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+
+    shop_link_cell.appendChild(list);
+  };
+
+  const parsePercentage = (chanceBuff = 1) => {
+    parsedTextArea.value = parsedContent.replace(
+      /\*(0*)(\d{1,})/g,
+      (match, zeros, num) => {
+        let x = parseInt(num);
+
+        let percentage = chanceBuff / x === 1 ? 100 : 100 / x;
+        percentage *= chanceBuff;
+
+        if (percentage < 100) {
+          const formattedPercentage =
+            percentage % 1 === 0
+              ? percentage.toFixed(0)
+              : percentage.toFixed(2).replace(/\.?0+$/, "");
+
+          return ` (${formattedPercentage}%)`;
+        } else return "";
+      }
+    );
+  };
+
+  const parseData = async () => {
     const regex = /(\d{5})\*\d{5}/g;
     const matches = [...rawPackContent.matchAll(regex)];
 
@@ -91,9 +220,11 @@
       }
     }
 
+    parseDataBtn.disabled = true;
+
     const notification = noty({
       type: "info",
-      text: "Fetching data...",
+      text: "Fetching items data..",
       timeout: false,
     });
 
@@ -101,10 +232,6 @@
       endpoint + "&itemids=[" + itemIds + "]",
       options
     );
-
-    // Once fetching is done, close notification and remove button
-    notification.close();
-    parseDataButton.remove();
 
     if (getItemData.status === 401) {
       GM.deleteValue("apiKey");
@@ -114,6 +241,10 @@
       });
       return;
     }
+
+    // Once fetching is done, close notification and remove button
+    notification.close();
+    parseDataBtn.remove();
 
     const { response: items } = await getItemData.json();
 
@@ -132,76 +263,31 @@
       );
     }
 
-    // Add spacing for readability
-    prettyContent = prettyContent.replace(/(\S)(&&|\|\|)(\S)/g, "$1 $2 $3");
+    // Make the content readable!
+    prettyContent = prettyContent
+      .replace(/\/\*.*?\*\//g, "") // Remove comments
+      .replace(/&&/g, " AND ") // Replace && with AND
+      .replace(/\|\|/g, " OR ") // Replace || with OR
+      .replace(/ +/g, " "); // Remove any excess whitespace
 
-    // Remove comments
-    prettyContent = prettyContent.replace(/\/\*.*?\*\//g, "");
+    // Assign to global variable
+    parsedItems = items;
+    parsedContent = prettyContent;
 
-    // Add percentage if it's below 100%
-    prettyContent = prettyContent.replace(
-      /\*(0*)(\d{1,})/g,
-      (match, zeros, num) => {
-        let x = parseInt(num);
-        let percentage = x === 1 ? 100 : 100 / x;
+    parsedTextArea.style.display = "block";
+    parsedTextArea.value = prettyContent;
 
-        if (percentage < 100) {
-          const formattedPercentage =
-            percentage % 1 === 0
-              ? percentage.toFixed(0)
-              : percentage.toFixed(2).replace(/\.?0+$/, "");
+    parsePercentage();
 
-          return ` (${formattedPercentage}%)`;
-        } else return "";
-      }
-    );
+    createChanceRow();
+    createChanceInput();
+    createChanceSimulateBtn();
 
-    // Replace || and && symbols
-    prettyContent = prettyContent.replace(/&&/g, "AND").replace(/\|\|/g, "OR");
+    createShopLinksRow();
+    createShopLinks();
+  };
 
-    // Create text area to display pack content
-    const packContentTextArea = document.createElement("textarea");
-    packContentTextArea.class = "wide_text";
-    packContentTextArea.style =
-      "line-height: 1.6; box-sizing: border-box; padding: 5px; width: 99%;";
-    packContentTextArea.rows = 8;
-    packContentTextArea.setAttribute("readonly", true);
-    packContentTextArea.value = prettyContent;
-
-    document.getElementById("packcontent").appendChild(packContentTextArea);
-
-    // Create new row to display shop links
-    const itemDataRow = packTable.insertRow(4);
-    let itemDataRowCell1 = itemDataRow.insertCell(0);
-    let itemDataRowCell2 = itemDataRow.insertCell(1);
-
-    itemDataRowCell1.style = "padding: 0 0 25px; text-align: center;";
-    itemDataRowCell1.textContent = "Shop Links";
-
-    itemDataRowCell2.id = "itemdatalist";
-    itemDataRowCell2.style = "padding: 0 0 25px";
-    itemDataRowCell2.colSpan = 3;
-
-    // Create a list of shop links from the items queried
-    const itemDataListCell = document.getElementById("itemdatalist");
-    const itemDataList = document.createElement("ul");
-    itemDataList.style =
-      "list-style: inside; list-style-type: none; padding-left: 5px;";
-
-    items.forEach((item) => {
-      const li = document.createElement("li");
-      const a = document.createElement("a");
-
-      const itemId = item.id.replace(/^0+/, "");
-
-      a.target = "_blank";
-      a.textContent = `${itemId}. ${he.decode(item.name)}`;
-      a.href = `/shop.php?ItemID=${itemId}`;
-
-      li.appendChild(a);
-      itemDataList.appendChild(li);
-    });
-
-    itemDataListCell.appendChild(itemDataList);
-  }
+  createParseDataRow();
+  createParseDataBtn();
+  createParsedContentArea();
 })();
