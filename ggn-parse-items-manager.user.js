@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Parse Data on Items Manager
 // @namespace    https://gazellegames.net/
-// @version      1.1
+// @version      1.2
 // @description  Adds a parse data button to translate advanced strings on the items manager page
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -30,6 +30,7 @@
     GM.setValue("apiKey", apiKey);
   }
 
+  const apiLimitInSeconds = 12;
   const endpoint = "https://gazellegames.net/api.php?request=items";
   const options = {
     method: "GET",
@@ -109,7 +110,7 @@
   const createChanceInput = () => {
     const input = document.createElement("input");
     input.id = "chance_input";
-    input.value = 1;
+    input.value = userChanceBuff;
     input.style = "margin-left: 5px; width: 50px;";
     input.type = "text";
 
@@ -133,12 +134,39 @@
   const createChanceSimulateBtn = () => {
     const button = document.createElement("button");
     button.type = "button";
-    button.style = "margin-left: 10px;";
+    button.style = "margin: 0 10px;";
     button.innerHTML = "Go";
 
     button.addEventListener("click", simulateChance);
 
     document.getElementById("chance_buff").appendChild(button);
+
+    const myBuffButton = document.createElement("button");
+    myBuffButton.type = "button";
+    myBuffButton.innerHTML = "My Chance";
+
+    myBuffButton.addEventListener("click", resetChance);
+
+    document.getElementById("chance_buff").appendChild(myBuffButton);
+
+    const defaultButton = document.createElement("button");
+    defaultButton.type = "button";
+    defaultButton.style = "margin: 0 10px;";
+    defaultButton.innerHTML = "Default";
+
+    defaultButton.addEventListener("click", defaultChance);
+
+    document.getElementById("chance_buff").appendChild(defaultButton);
+  };
+
+  const resetChance = () => {
+    document.getElementById("chance_input").value = userChanceBuff;
+    parsePercentage(userChanceBuff);
+  };
+
+  const defaultChance = () => {
+    document.getElementById("chance_input").value = 1;
+    parsePercentage(1);
   };
 
   const simulateChance = () => {
@@ -205,7 +233,45 @@
     );
   };
 
+  const getUserChanceBuff = async () => {
+    const getUserBuffs = await (
+      await fetch(endpoint + "&type=users_buffs", options)
+    ).json();
+
+    // Assign global variable
+    userChanceBuff = getUserBuffs.response.Chance;
+  };
+
   const parseData = async () => {
+    const now = Date.now() / 1000;
+    const lastApiTimestamp = await GM.getValue("lastApiTimestamp");
+
+    if (now - lastApiTimestamp < apiLimitInSeconds) {
+      let timeRemaining =
+        apiLimitInSeconds - Math.floor(now - lastApiTimestamp);
+
+      let timerInterval;
+
+      const waitNotification = noty({
+        type: "warning",
+        text: `Please wait for ${timeRemaining} seconds.`,
+        timeout: timeRemaining * 1000,
+        closeWith: null,
+        callback: {
+          onClose: () => {
+            clearInterval(timerInterval);
+          },
+        },
+      });
+
+      timerInterval = setInterval(() => {
+        timeRemaining--;
+        waitNotification.setText(`Please wait for ${timeRemaining} seconds.`);
+      }, 1000);
+
+      return;
+    }
+
     const regex = /(\d{5})\*\d{5}/g;
     const matches = [...rawPackContent.matchAll(regex)];
 
@@ -242,6 +308,10 @@
       return;
     }
 
+    await getUserChanceBuff();
+
+    GM.setValue("lastApiTimestamp", Date.now() / 1000);
+
     // Once fetching is done, close notification and remove button
     notification.close();
     parseDataBtn.remove();
@@ -277,11 +347,11 @@
     parsedTextArea.style.display = "block";
     parsedTextArea.value = prettyContent;
 
-    parsePercentage();
-
     createChanceRow();
     createChanceInput();
     createChanceSimulateBtn();
+
+    parsePercentage(userChanceBuff);
 
     createShopLinksRow();
     createShopLinks();
