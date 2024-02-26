@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Trade Value Calculator
 // @namespace    https://gazellegames.net/
-// @version      1.0
+// @version      1.1
 // @description  Show the minimum required trade value when trading
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -14,7 +14,7 @@ const stringToInt = (num) => {
 };
 
 const parseNumber = (num) => {
-  return num.toLocaleString("en-US");
+  return Math.round(num).toLocaleString("en-US");
 };
 
 const whoNeedsFiller = (myValue, theirValue) => {
@@ -32,7 +32,7 @@ const createInfoDiv = () => {
   div.id = "required_info";
   div.style =
     "clear: both; background: rgba(0, 0, 0, 0.5); color: #fff; padding: 10px; margin-bottom: 15px; font-size: 16px;";
-  div.innerHTML = `<span></span> need around <strong></strong> of trade value to complete this trade.`;
+  div.innerHTML = `<span></span> still need around <strong></strong> worth of trade value to complete this trade.`;
 
   document
     .querySelector(".message_box")
@@ -49,7 +49,7 @@ const requiredParty = requiredInfo.querySelector("span");
   ("use strict");
 
   const myValueEl = document.getElementById("my_trade_value_gold");
-  let myValue = stringToInt(myValueEl.textContent);
+  const myValue = stringToInt(myValueEl.textContent);
 
   const theirValueEl = document.getElementById("other_trade_value_gold");
   const theirValue = stringToInt(theirValueEl.textContent);
@@ -61,7 +61,13 @@ const requiredParty = requiredInfo.querySelector("span");
     requiredInfo.style.display = "none";
   }
 
-  requiredAmount.textContent = parseNumber(minRequiredValue);
+  // Initial setup
+  if (myValue > theirValue) {
+    requiredAmount.textContent = parseNumber(myValue / 1.5 - theirValue);
+  } else {
+    requiredAmount.textContent = parseNumber(theirValue / 1.5 - myValue);
+  }
+
   requiredParty.textContent = whoNeedsFiller(myValue, theirValue);
 
   const obsConfig = { childList: true };
@@ -71,7 +77,7 @@ const requiredParty = requiredInfo.querySelector("span");
     const myNewValue = stringToInt(myValueEl.textContent);
     const remainingValue = minRequiredValue - myNewValue;
 
-    if (remainingValue >= 0) {
+    if (remainingValue > 0) {
       requiredAmount.textContent = parseNumber(remainingValue);
       requiredInfo.style.display = "block";
     } else {
@@ -80,7 +86,6 @@ const requiredParty = requiredInfo.querySelector("span");
 
     if (myNewValue > maxRequiredValue) {
       const theirMinRequiredValue = parseInt(myNewValue / 1.5);
-      console.log(theirMinRequiredValue);
       requiredInfo.style.display = "block";
       requiredAmount.textContent = parseNumber(
         theirMinRequiredValue - theirValue
