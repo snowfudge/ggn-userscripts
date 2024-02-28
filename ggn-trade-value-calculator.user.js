@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Trade Value Calculator
 // @namespace    https://gazellegames.net/
-// @version      1.1
+// @version      1.2
 // @description  Show the minimum required trade value when trading
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -61,11 +61,19 @@ const requiredParty = requiredInfo.querySelector("span");
     requiredInfo.style.display = "none";
   }
 
+  let requiredValue;
+
   // Initial setup
   if (myValue > theirValue) {
-    requiredAmount.textContent = parseNumber(myValue / 1.5 - theirValue);
+    requiredValue = myValue / 1.5 - theirValue;
   } else {
-    requiredAmount.textContent = parseNumber(theirValue / 1.5 - myValue);
+    requiredValue = theirValue / 1.5 - myValue;
+  }
+
+  requiredAmount.textContent = parseNumber(requiredValue);
+
+  if (requiredValue <= 0) {
+    requiredInfo.style.display = "none";
   }
 
   requiredParty.textContent = whoNeedsFiller(myValue, theirValue);
