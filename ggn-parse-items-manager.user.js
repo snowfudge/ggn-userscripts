@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         GGn Parse Data on Items Manager
+// @name         GGn Parse Items Manager
 // @namespace    https://gazellegames.net/
-// @version      1.2
+// @version      1.2.1
 // @description  Adds a parse data button to translate advanced strings on the items manager page
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts

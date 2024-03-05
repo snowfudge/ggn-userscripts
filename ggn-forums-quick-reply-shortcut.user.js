@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         GGn Forums: Ctrl + Enter shortcut to submit a quick reply
+// @name         GGn Forums: Quick Reply Shortcut
 // @namespace    https://gazellegames.net/
-// @version      1.0
-// @description  Submit a quick reply using Ctrl + Enter
+// @version      1.0.1
+// @description  Use Ctrl + Enter to submit your reply
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-quick-reply-shortcut.user.js

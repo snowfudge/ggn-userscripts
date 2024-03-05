@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         GGn Forums: Autofocus on reply
+// @name         GGn Forums: Reply Autofocus
 // @namespace    https://gazellegames.net/
-// @version      1.0
-// @description  Automatically scroll down and autofocus on the textarea for quick reply
+// @version      1.0.1
+// @description  This will scroll down to the end of the page and focus your cursor on the quick reply area
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-reply-autofocus.user.js

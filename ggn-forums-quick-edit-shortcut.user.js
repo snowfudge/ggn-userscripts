@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         GGn Forums:  Ctrl + Enter to submit edited post
+// @name         GGn Forums: Quick Edit Shortcut
 // @namespace    https://gazellegames.net/
-// @version      1.0
-// @description  Submit an edited post using Ctrl + Enter
+// @version      1.0.1
+// @description  Use Ctrl + Enter to submit your post once you are done editing
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-quick-edit-shortcut.user.js

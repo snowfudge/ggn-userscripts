@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         GGn Forums: Autofocus on edit
+// @name         GGn Forums: Edit Autofocus
 // @namespace    https://gazellegames.net/
-// @version      1.0
-// @description  Autofocus on the textarea when editing a post
+// @version      1.0.1
+// @description  This will focus your cursor on the textarea after you click Edit on your forum post
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-forums-edit-autofocus.user.js
