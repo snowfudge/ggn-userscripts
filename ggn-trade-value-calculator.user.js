@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         GGn Trade Value Calculator
 // @namespace    https://gazellegames.net/
-// @version      1.2
-// @description  Show the minimum required trade value when trading
+// @version      1.2.1
+// @description  This will show the minimum required trade value when trading
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-trade-value-calculator.user.js
