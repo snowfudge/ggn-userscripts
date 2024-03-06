@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         GGn Forums: Last Oage Shortcut
+// @name         GGn Forums: Last Page Shortcut
 // @namespace    https://gazellegames.net/
-// @version      1.0.1
+// @version      1.0.2
 // @description  Use Ctrl + ] to go to the last page of the forum thread you're in
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
