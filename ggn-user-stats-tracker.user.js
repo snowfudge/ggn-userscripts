@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.0
+// @version      1.1
 // @description  Show a graph of your traffic or gold stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -76,7 +76,11 @@ const createUserStatsBox = () => {
   <div class="head tooltip" id="userStatsHead">
     <span style="float:left;"><strong>User Stats</strong></span>
   </div>
-  <div class="pad" id="userStatsDiv" style="display: block; width: 95%; margin: 0 auto"></div>
+  <div class="pad">
+    <p>The stats will automatically update once every minute (60 seconds) whenever you use the site.<br>
+    You can click on <strong style="color: #36a2eb">Uploaded</strong>, <strong style="color: #ff6384;">Downloaded</strong> or <strong style="color: #ff9f40;">Gold</strong> to toggle the graph.</p>
+    <div id="userStatsDiv" style="width: 95%; margin: 25px auto 0;"></div>
+  </div>
 </div>`;
 
   profileBox.insertAdjacentHTML("afterend", userStatsHTML);
@@ -86,6 +90,13 @@ const createUserStatsBox = () => {
     .addEventListener("click", toggleUserStatsDiv);
 
   return document.getElementById("userStatsDiv");
+};
+
+const parseTime = (time) => {
+  return moment(time)
+    .format("DD MMM YYYY - h:mm a z")
+    .replace("pm", "p.m")
+    .replace("am", "a.m");
 };
 
 const buildGraph = async (el) => {
@@ -211,9 +222,7 @@ const buildGraph = async (el) => {
       plugins: {
         title: {
           display: true,
-          text: `Last Updated: ${moment(lastUpdated * 1000).format(
-            "DD MMM YYYY HH:mm"
-          )}`,
+          text: `Last Updated: ${parseTime(lastUpdated * 1000)}`,
         },
         legend: {
           onClick: (e, legendItem, legend) => {
@@ -231,7 +240,7 @@ const buildGraph = async (el) => {
             },
             title: (ctx) => {
               const day = moment(ctx[0].parsed.x).format("YYYY-MM-DD");
-              return stats[day]["last_updated"];
+              return parseTime(new Date(stats[day]["last_updated"]).getTime());
             },
           },
         },
