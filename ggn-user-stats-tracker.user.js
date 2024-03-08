@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.1.1
+// @version      1.1.2
 // @description  Show a graph of your traffic or gold stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -72,24 +72,25 @@ const toggleUserStatsDiv = () => {
 const createUserStatsBox = () => {
   const profileBox = document.querySelector(".box_info");
   const userStatsHTML = `
-<div class="box" id="userStatsHead">
+<div class="box" id="userStatsDiv">
   <div class="head tooltip">
     <span style="float:left;"><strong>User Stats</strong></span>
   </div>
   <div class="pad" id="userStats">
     <p>The stats will automatically update once every minute (60 seconds) whenever you use the site.<br>
     You can click on <strong style="color: #36a2eb">Uploaded</strong>, <strong style="color: #ff6384;">Downloaded</strong> or <strong style="color: #ff9f40;">Gold</strong> to toggle the graph.</p>
-    <div id="userStatsDiv" style="width: 95%; margin: 25px auto 0;"></div>
+    <div id="userGraph" style="width: 95%; margin: 25px auto 0;"></div>
   </div>
 </div>`;
 
   profileBox.insertAdjacentHTML("afterend", userStatsHTML);
 
   document
-    .getElementById("userStatsHead")
+    .getElementById("userStatsDiv")
+    .querySelector(".head")
     .addEventListener("click", toggleUserStatsDiv);
 
-  return document.getElementById("userStatsDiv");
+  return document.getElementById("userGraph");
 };
 
 const parseTime = (time) => {
@@ -373,8 +374,8 @@ const buildGraph = async (el) => {
   if (response) await trackData(response);
 
   if (isMyProfile()) {
-    const statsElement = createUserStatsBox();
-    buildGraph(statsElement);
+    const userGraphCanvas = createUserStatsBox();
+    buildGraph(userGraphCanvas);
 
     window.addEventListener("resize", function () {
       userGraph.resize();
