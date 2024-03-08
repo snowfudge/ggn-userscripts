@@ -2,7 +2,7 @@
 // @name         GGn Trade to User Search Bar
 // @namespace    https://gazellegames.net/
 // @version      1.0
-// @description  Show a search bar to quickly trade with a user
+// @description  This will show a search bar to quickly trade with a user
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-trade-to-user-search-bar.user.js

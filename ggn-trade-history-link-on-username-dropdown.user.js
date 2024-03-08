@@ -5,7 +5,7 @@
 // @description  This will show a Trade History link on your username dropdown menu
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
-// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-trade-history-on-username-dropdown.user.js
+// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-trade-history-link-on-username-dropdown.user.js
 // @match        https://gazellegames.net/*
 // ==/UserScript==
 
