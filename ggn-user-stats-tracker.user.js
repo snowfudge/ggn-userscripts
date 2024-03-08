@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.1
+// @version      1.1.1
 // @description  Show a graph of your traffic or gold stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -50,7 +50,7 @@ const isMyProfile = () => {
   const welcomeInfo = document.getElementById("userinfo_username");
   const welcomeUsername = welcomeInfo.querySelector(".username").textContent;
 
-  const profile = document.getElementById("username");
+  const profile = document.querySelector(".profile");
 
   if (profile) {
     const profileUsername = profile.querySelector(".username").textContent;
@@ -60,7 +60,7 @@ const isMyProfile = () => {
 };
 
 const toggleUserStatsDiv = () => {
-  const userStats = document.getElementById("userStatsDiv");
+  const userStats = document.getElementById("userStats");
 
   if (userStats.style.display === "none") {
     userStats.style.display = "block";
@@ -72,11 +72,11 @@ const toggleUserStatsDiv = () => {
 const createUserStatsBox = () => {
   const profileBox = document.querySelector(".box_info");
   const userStatsHTML = `
-<div class="box">
-  <div class="head tooltip" id="userStatsHead">
+<div class="box" id="userStatsHead">
+  <div class="head tooltip">
     <span style="float:left;"><strong>User Stats</strong></span>
   </div>
-  <div class="pad">
+  <div class="pad" id="userStats">
     <p>The stats will automatically update once every minute (60 seconds) whenever you use the site.<br>
     You can click on <strong style="color: #36a2eb">Uploaded</strong>, <strong style="color: #ff6384;">Downloaded</strong> or <strong style="color: #ff9f40;">Gold</strong> to toggle the graph.</p>
     <div id="userStatsDiv" style="width: 95%; margin: 25px auto 0;"></div>
@@ -375,9 +375,9 @@ const buildGraph = async (el) => {
   if (isMyProfile()) {
     const statsElement = createUserStatsBox();
     buildGraph(statsElement);
+
+    window.addEventListener("resize", function () {
+      userGraph.resize();
+    });
   }
 })();
-
-window.addEventListener("resize", function () {
-  userGraph.resize();
-});
