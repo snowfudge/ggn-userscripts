@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.1.2
+// @version      1.1.3
 // @description  Show a graph of your traffic or gold stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -250,6 +250,7 @@ const buildGraph = async (el) => {
         x: {
           ticks: {
             padding: 15,
+            maxTicksLimit: 6,
           },
           type: "time",
           time: {
