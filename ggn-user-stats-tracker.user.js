@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.2
+// @version      1.2.1
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -211,6 +211,8 @@ const buildUserStatsGraph = async (el) => {
     }
   };
 
+  const defaultYAxis = savedPreference["Gold"] ? trafficAxis : goldAxis;
+
   userStatsGraph = new Chart(canvas, {
     data: {
       datasets: [
@@ -288,7 +290,7 @@ const buildUserStatsGraph = async (el) => {
             },
           },
         },
-        y: trafficAxis,
+        y: defaultYAxis,
       },
     },
     plugins: [
