@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.1.3
-// @description  Show a graph of your traffic or gold stats on your profile
+// @version      1.2
+// @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-user-stats-tracker.user.js
@@ -15,8 +15,14 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js
 // ==/UserScript==
 
+Chart.defaults.color = "#FFF";
+Chart.defaults.borderColor = "rgba(255, 255, 255, 0.05)";
+Chart.defaults.font.size = 14;
+
+let userStatsGraph;
+let communityStatsGraph;
+let savedPreference;
 const currentDate = moment(new Date()).format("YYYY-MM-DD");
-let userGraph;
 
 const bytesIn = (target) => {
   let exponent = 1;
@@ -77,9 +83,14 @@ const createUserStatsBox = () => {
     <span style="float:left;"><strong>User Stats</strong></span>
   </div>
   <div class="pad" id="userStats">
-    <p>The stats will automatically update once every minute (60 seconds) whenever you use the site.<br>
-    You can click on <strong style="color: #36a2eb">Uploaded</strong>, <strong style="color: #ff6384;">Downloaded</strong> or <strong style="color: #ff9f40;">Gold</strong> to toggle the graph.</p>
-    <div id="userGraph" style="width: 95%; margin: 25px auto 0;"></div>
+    <p>
+      The stats will automatically update once every minute (60 seconds) whenever you use the site.<br>
+    You can click on <strong style="color: #36a2eb">each</strong> <strong style="color: #ff6384;">of</strong> <strong style="color: #ff9f40;">the</strong> <strong style="color:#4bc0c0">six</strong> <strong style="color:#9966ff">colored</strong> <strong style="color:#ffcc56">boxes</strong> to toggle the graph.<br>
+      Your preference will automatically be saved.
+    </p>
+
+    <div id="userStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
+    <div id="communityStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
   </div>
 </div>`;
 
@@ -90,7 +101,10 @@ const createUserStatsBox = () => {
     .querySelector(".head")
     .addEventListener("click", toggleUserStatsDiv);
 
-  return document.getElementById("userGraph");
+  return {
+    userStatsEl: document.getElementById("userStatsGraph"),
+    communityStatsEl: document.getElementById("communityStatsGraph"),
+  };
 };
 
 const parseTime = (time) => {
@@ -100,7 +114,22 @@ const parseTime = (time) => {
     .replace("am", "a.m");
 };
 
-const buildGraph = async (el) => {
+const getTimeUnit = (length) => {
+  if (length > 90) {
+    timeUnit = "month";
+    minUnit = "month";
+  } else if (length > 30) {
+    timeUnit = "week";
+    minUnit = "week";
+  } else {
+    timeUnit = "day";
+    minUnit = "day";
+  }
+
+  return { timeUnit, minUnit };
+};
+
+const buildUserStatsGraph = async (el) => {
   const canvas = document.createElement("canvas");
 
   const stats = await GM.getValue("userStats");
@@ -123,22 +152,7 @@ const buildGraph = async (el) => {
     gold.push(stats[date]["gold"]);
   });
 
-  let timeUnit, minUnit;
-
-  if (period.length > 90) {
-    timeUnit = "month";
-    minUnit = "month";
-  } else if (period.length > 30) {
-    timeUnit = "week";
-    minUnit = "week";
-  } else {
-    timeUnit = "day";
-    minUnit = "day";
-  }
-
-  Chart.defaults.color = "#FFF";
-  Chart.defaults.borderColor = "rgba(255, 255, 255, 0.05)";
-  Chart.defaults.font.size = 14;
+  const { timeUnit, minUnit } = getTimeUnit(period.length);
 
   const goldAxis = {
     title: {
@@ -197,24 +211,26 @@ const buildGraph = async (el) => {
     }
   };
 
-  userGraph = new Chart(canvas, {
+  userStatsGraph = new Chart(canvas, {
     data: {
       datasets: [
         {
           type: "line",
-          label: "Uploaded",
+          label: "Upload",
           data: uploaded,
+          hidden: savedPreference["Upload"],
         },
         {
           type: "line",
-          label: "Downloaded",
+          label: "Download",
           data: downloaded,
+          hidden: savedPreference["Download"],
         },
         {
           type: "line",
           label: "Gold",
           data: gold,
-          hidden: true,
+          hidden: savedPreference["Gold"],
         },
       ],
       labels: period,
@@ -226,10 +242,19 @@ const buildGraph = async (el) => {
           text: `Last Updated: ${parseTime(lastUpdated * 1000)}`,
         },
         legend: {
-          onClick: (e, legendItem, legend) => {
+          onClick: async (e, legendItem, legend) => {
             const index = legendItem.datasetIndex;
             toggleChart(index, legend.chart);
             legend.chart.update();
+
+            const legends = legend.chart.legend.legendItems;
+            const userPref = (await GM.getValue("userPref")) || {};
+
+            legends.forEach((item) => {
+              userPref[item.text] = item.hidden;
+            });
+
+            await GM.setValue("userPref", { ...savedPreference, ...userPref });
           },
         },
         tooltip: {
@@ -262,13 +287,6 @@ const buildGraph = async (el) => {
               week: "dd MMM yyyy",
             },
           },
-          title: {
-            display: true,
-            text: "Date",
-            font: {
-              size: 15,
-            },
-          },
         },
         y: trafficAxis,
       },
@@ -289,10 +307,165 @@ const buildGraph = async (el) => {
   el.appendChild(canvas);
 };
 
+const buildCommunityStatsGraph = async (el) => {
+  const canvas = document.createElement("canvas");
+  const lastUpdated = await GM.getValue("lastApiTimestamp");
+  const stats = await GM.getValue("communityStats");
+
+  const period = [];
+  const lines = [];
+  const posts = [];
+  const uploads = [];
+
+  for (let key in stats) {
+    period.push(key);
+  }
+
+  period.sort((a, b) => new Date(a) - new Date(b));
+
+  period.forEach((date) => {
+    lines.push(stats[date]["lines"]);
+    posts.push(stats[date]["posts"]);
+    uploads.push(stats[date]["uploads"]);
+  });
+
+  const { timeUnit, minUnit } = getTimeUnit(period.length);
+
+  communityStatsGraph = new Chart(canvas, {
+    data: {
+      datasets: [
+        {
+          type: "line",
+          label: "IRC Lines",
+          data: lines,
+          borderColor: "rgb(75, 192, 192)",
+          backgroundColor: "rgba(75, 192, 192, 0.5)",
+          hidden: savedPreference["IRC Lines"],
+        },
+        {
+          type: "line",
+          label: "Forum Posts",
+          data: posts,
+          borderColor: "rgb(153, 102, 255)",
+          backgroundColor: "rgba(153, 102, 255, 0.5)",
+          hidden: savedPreference["Forum Posts"],
+        },
+        {
+          type: "line",
+          label: "Torrent Uploads",
+          data: uploads,
+          borderColor: "rgb(255, 205, 86)",
+          backgroundColor: "rgba(255, 205, 86,0.5)",
+          hidden: savedPreference["Torrent Uploads"],
+        },
+      ],
+      labels: period,
+    },
+    options: {
+      plugins: {
+        legend: {
+          onClick: async (e, legendItem, legend) => {
+            const index = legendItem.datasetIndex;
+            const { chart, legendItems } = legend;
+
+            if (chart.isDatasetVisible(index)) {
+              chart.hide(index);
+              legendItem.hidden = true;
+            } else {
+              legendItems.forEach((val, legendIndex) => {
+                if (index != legendIndex) {
+                  chart.hide(legendIndex);
+                }
+              });
+              chart.show(index);
+              legendItem.hidden = false;
+            }
+
+            const legends = legend.chart.legend.legendItems;
+            const userPref = (await GM.getValue("userPref")) || {};
+
+            legends.forEach((item) => {
+              userPref[item.text] = item.hidden;
+            });
+
+            await GM.setValue("userPref", { ...savedPreference, ...userPref });
+          },
+        },
+        title: {
+          display: true,
+          text: `Last Updated: ${parseTime(lastUpdated * 1000)}`,
+        },
+        tooltip: {
+          boxPadding: 5,
+          callbacks: {
+            title: (ctx) => {
+              const day = moment(ctx[0].parsed.x).format("YYYY-MM-DD");
+              return parseTime(new Date(stats[day]["last_updated"]).getTime());
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            padding: 15,
+            maxTicksLimit: 6,
+          },
+          type: "time",
+          time: {
+            unit: timeUnit,
+            minUnit: minUnit,
+            parser: "yyyy-MM-dd",
+            displayFormats: {
+              day: "dd MMM yyyy",
+              week: "dd MMM yyyy",
+            },
+          },
+        },
+        y: {
+          ticks: {
+            padding: 15,
+          },
+          title: {
+            display: true,
+            text: "Count",
+            font: {
+              size: 15,
+            },
+          },
+        },
+      },
+    },
+    plugins: [
+      {
+        beforeInit: function (chart) {
+          const originalFit = chart.legend.fit;
+          chart.legend.fit = function fit() {
+            originalFit.bind(chart.legend)();
+            this.height += 25;
+          };
+        },
+      },
+    ],
+  });
+
+  el.appendChild(canvas);
+};
+
+const defaultPref = {
+  Upload: true,
+  Download: true,
+  Gold: false,
+  "IRC Lines": false,
+  "Forum Posts": true,
+  "Torrent Uploads": true,
+};
+
 (async function () {
   "use strict";
 
   let apiKey = await GM.getValue("apiKey");
+  savedPreference = (await GM.getValue("userPref")) || defaultPref;
 
   if (!apiKey) {
     if (
@@ -308,12 +481,13 @@ const buildGraph = async (el) => {
   const getUserData = async () => {
     const now = Date.now() / 1000;
     const lastApiTimestamp = await GM.getValue("lastApiTimestamp");
+    let userId = (await GM.getValue("userId")) || null;
 
     // Just do the API call once every minute
     const apiLimitInSeconds = 60;
 
-    const endpoint =
-      "https://gazellegames.net/api.php?request=user_stats_ratio";
+    //?request=user&id=71102
+    const endpoint = "https://gazellegames.net/api.php";
     const options = {
       method: "GET",
       mode: "same-origin",
@@ -329,7 +503,25 @@ const buildGraph = async (el) => {
       return;
     }
 
-    const apiCall = await fetch(endpoint, options);
+    if (!userId) {
+      const getUserId = await fetch(`${endpoint}?request=quick_user`, options);
+      if (getUserId.status === 401) {
+        GM.deleteValue("apiKey");
+        noty({
+          type: "warning",
+          text: "Invalid API key. Please refresh the page and enter a new one.",
+        });
+        return;
+      }
+      const { response } = await getUserId.json();
+      GM.setValue("userId", response.id);
+      userId = response.id;
+    }
+
+    const apiCall = await fetch(
+      `${endpoint}?request=user&id=${userId}`,
+      options
+    );
 
     if (apiCall.status === 401) {
       GM.deleteValue("apiKey");
@@ -347,14 +539,23 @@ const buildGraph = async (el) => {
   };
 
   const trackData = async (response) => {
-    const currentStats = {};
+    const currentUserStats = {};
+    const currentCommunityStats = {};
 
-    currentStats[currentDate] = {};
-    currentStats[currentDate]["uploaded"] = response.uploaded;
-    currentStats[currentDate]["downloaded"] = response.downloaded;
-    currentStats[currentDate]["last_updated"] = moment(new Date()).format(
-      "DD MMM YYYY HH:mm"
-    );
+    const { stats, community } = response;
+
+    const currentTime = moment(new Date()).format("DD MMM YYYY HH:mm");
+
+    currentUserStats[currentDate] = {};
+    currentUserStats[currentDate]["uploaded"] = stats.uploaded;
+    currentUserStats[currentDate]["downloaded"] = stats.downloaded;
+    currentUserStats[currentDate]["last_updated"] = currentTime;
+
+    currentCommunityStats[currentDate] = {};
+    currentCommunityStats[currentDate]["lines"] = community.ircLines;
+    currentCommunityStats[currentDate]["posts"] = community.posts;
+    currentCommunityStats[currentDate]["uploads"] = community.uploaded;
+    currentCommunityStats[currentDate]["last_updated"] = currentTime;
 
     const currentGold = parseInt(
       document
@@ -362,24 +563,30 @@ const buildGraph = async (el) => {
         .querySelector(".tooltip")
         .textContent.replace(/,/g, "")
     );
-    currentStats[currentDate]["gold"] = currentGold;
+    currentUserStats[currentDate]["gold"] = currentGold;
 
-    const existingStats = (await GM.getValue("userStats")) || {};
+    const existingUserStats = (await GM.getValue("userStats")) || {};
+    const existingCommunityStats = (await GM.getValue("communityStats")) || {};
 
-    existingStats[currentDate] = currentStats[currentDate];
+    existingUserStats[currentDate] = currentUserStats[currentDate];
+    existingCommunityStats[currentDate] = currentCommunityStats[currentDate];
 
-    await GM.setValue("userStats", existingStats);
+    await GM.setValue("userStats", existingUserStats);
+    await GM.setValue("communityStats", existingCommunityStats);
   };
 
   const response = await getUserData();
   if (response) await trackData(response);
 
   if (isMyProfile()) {
-    const userGraphCanvas = createUserStatsBox();
-    buildGraph(userGraphCanvas);
+    const { userStatsEl, communityStatsEl } = createUserStatsBox();
+
+    buildUserStatsGraph(userStatsEl);
+    buildCommunityStatsGraph(communityStatsEl);
 
     window.addEventListener("resize", function () {
-      userGraph.resize();
+      userStatsGraph.resize();
+      communityStatsGraph.resize();
     });
   }
 })();
