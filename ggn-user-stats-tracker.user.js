@@ -486,7 +486,6 @@ const defaultPref = {
     // Just do the API call once every minute
     const apiLimitInSeconds = 60;
 
-    //?request=user&id=71102
     const endpoint = "https://gazellegames.net/api.php";
     const options = {
       method: "GET",
