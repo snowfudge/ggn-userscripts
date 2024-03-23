@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.2.1
+// @version      1.2.2
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -129,6 +129,20 @@ const getTimeUnit = (length) => {
   return { timeUnit, minUnit };
 };
 
+const trackingInfo = (period) => {
+  return {
+    display: true,
+    text: `Stats tracked since ${moment(period[0]).format("DD MMM YYYY")}`,
+    font: {
+      size: 13,
+      weight: "oblique",
+    },
+    color: "rgb(201, 203, 207)",
+    padding: {
+      bottom: 15,
+    },
+  };
+};
 const buildUserStatsGraph = async (el) => {
   const canvas = document.createElement("canvas");
 
@@ -243,6 +257,7 @@ const buildUserStatsGraph = async (el) => {
           display: true,
           text: `Last Updated: ${parseTime(lastUpdated * 1000)}`,
         },
+        subtitle: trackingInfo(period),
         legend: {
           onClick: async (e, legendItem, legend) => {
             const index = legendItem.datasetIndex;
@@ -397,6 +412,7 @@ const buildCommunityStatsGraph = async (el) => {
           display: true,
           text: `Last Updated: ${parseTime(lastUpdated * 1000)}`,
         },
+        subtitle: trackingInfo(period),
         tooltip: {
           boxPadding: 5,
           callbacks: {
