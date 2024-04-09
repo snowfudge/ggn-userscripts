@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Trade Value Calculator
 // @namespace    https://gazellegames.net/
-// @version      1.3.1
+// @version      1.3.2
 // @description  This will show items value in the trade window and the estimated min/max amount of trade value required to complete a trade
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -40,9 +40,7 @@ const createInfoDiv = () => {
 };
 
 const showItemValue = () => {
-  const items = document
-    .getElementById("main-items-wrapper")
-    .querySelectorAll("li");
+  const items = document.querySelectorAll("li.item");
 
   items.forEach((el) => {
     const value = el.getAttribute("data-cost");
