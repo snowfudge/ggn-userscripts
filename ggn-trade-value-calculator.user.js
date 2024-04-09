@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         GGn Trade Value Calculator
 // @namespace    https://gazellegames.net/
-// @version      1.2.1
-// @description  This will show the minimum required trade value when trading
+// @version      1.3
+// @description  This will show items value in the trade window and the estimated min/max amount of trade value required to complete a trade
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-trade-value-calculator.user.js
@@ -32,13 +32,32 @@ const createInfoDiv = () => {
   div.id = "required_info";
   div.style =
     "clear: both; background: rgba(0, 0, 0, 0.5); color: #fff; padding: 10px; margin-bottom: 15px; font-size: 16px;";
-  div.innerHTML = `<span></span> still need around <strong></strong> worth of trade value to complete this trade.`;
+  div.innerHTML = `<span></span> need around <strong></strong> worth trade value to complete this trade.`;
 
   document
     .querySelector(".message_box")
     .insertAdjacentElement("afterbegin", div);
 };
 
+const showItemValue = () => {
+  const items = document
+    .getElementById("main-items-wrapper")
+    .querySelectorAll("li");
+
+  items.forEach((el) => {
+    const value = el.getAttribute("data-cost");
+    el.querySelector("h3").style.bottom = "15px";
+
+    el.insertAdjacentHTML(
+      "beforeend",
+      `<span style="background: #000; color: #DDA82A; position: absolute; bottom: 2px; padding: 3px; left: 0; right: 0;">${parseNumber(
+        value
+      )}</span>`
+    );
+  });
+};
+
+showItemValue();
 createInfoDiv();
 
 const requiredInfo = document.getElementById("required_info");
@@ -48,62 +67,57 @@ const requiredParty = requiredInfo.querySelector("span");
 (function () {
   ("use strict");
 
+  const acceptButton = document.getElementById("accept_trade");
+
   const myValueEl = document.getElementById("my_trade_value_gold");
   const myValue = stringToInt(myValueEl.textContent);
 
   const theirValueEl = document.getElementById("other_trade_value_gold");
   const theirValue = stringToInt(theirValueEl.textContent);
 
-  const minRequiredValue = parseInt(theirValue / 1.5);
-  const maxRequiredValue = parseInt(theirValue * 1.5);
-
   if (myValue === 0 && theirValue === 0) {
     requiredInfo.style.display = "none";
   }
 
-  let requiredValue;
+  let myInitialMinValue = theirValue / 1.5,
+    myInitialMaxValue = theirValue * 1.5,
+    theirInitialMinValue = myValue / 1.5,
+    theirInitialMaxValue = myValue * 1.5,
+    initialValueInfo;
 
-  // Initial setup
   if (myValue > theirValue) {
-    requiredValue = myValue / 1.5 - theirValue;
-  } else {
-    requiredValue = theirValue / 1.5 - myValue;
-  }
-
-  requiredAmount.textContent = parseNumber(requiredValue);
-
-  if (requiredValue <= 0) {
-    requiredInfo.style.display = "none";
+    // They need
+    initialValueInfo = `~${parseNumber(theirInitialMinValue)} to ~${parseNumber(
+      theirInitialMaxValue
+    )}`;
+  } else if (myValue < theirValue) {
+    // I need
+    initialValueInfo = `~${parseNumber(myInitialMinValue)} to ~${parseNumber(
+      myInitialMaxValue
+    )}`;
   }
 
   requiredParty.textContent = whoNeedsFiller(myValue, theirValue);
+  requiredAmount.textContent = initialValueInfo;
+  requiredInfo.style.display = "block";
 
   const obsConfig = { childList: true };
   const observer = new MutationObserver(function (mutationsList, observer) {
     observer.disconnect();
 
+    const acceptButtonDisabled = acceptButton.hasAttribute("disabled");
     const myNewValue = stringToInt(myValueEl.textContent);
-    const remainingValue = minRequiredValue - myNewValue;
-
-    if (remainingValue > 0) {
-      requiredAmount.textContent = parseNumber(remainingValue);
-      requiredInfo.style.display = "block";
-    } else {
-      requiredInfo.style.display = "none";
-    }
-
-    if (myNewValue > maxRequiredValue) {
-      const theirMinRequiredValue = parseInt(myNewValue / 1.5);
-      requiredInfo.style.display = "block";
-      requiredAmount.textContent = parseNumber(
-        theirMinRequiredValue - theirValue
-      );
-    }
 
     requiredParty.textContent = whoNeedsFiller(myNewValue, theirValue);
 
-    if (myNewValue === 0 && theirValue === 0) {
-      requiredInfo.style.display = "none";
+    requiredInfo.style.display = acceptButtonDisabled ? "block" : "none";
+
+    if (myNewValue > theirValue) {
+      requiredAmount.textContent = `~${parseNumber(
+        myNewValue / 1.5
+      )} to ~${parseNumber(myNewValue * 1.5)}`;
+    } else if (myNewValue < theirValue) {
+      requiredAmount.textContent = initialValueInfo;
     }
 
     observer.observe(myValueEl, obsConfig);
