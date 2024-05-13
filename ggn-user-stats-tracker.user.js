@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.2.2
+// @version      1.2.3
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -501,8 +501,8 @@ const defaultPref = {
     const lastApiTimestamp = await GM.getValue("lastApiTimestamp");
     let userId = (await GM.getValue("userId")) || null;
 
-    // Just do the API call once every minute
-    const apiLimitInSeconds = 60;
+    // Just do the API call once every hour
+    const apiLimitInSeconds = 3600;
 
     const endpoint = "https://gazellegames.net/api.php";
     const options = {
