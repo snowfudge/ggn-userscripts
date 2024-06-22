@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.2.3
+// @version      1.2.4
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -84,7 +84,7 @@ const createUserStatsBox = () => {
   </div>
   <div class="pad" id="userStats">
     <p>
-      The stats will automatically update once every minute (60 seconds) whenever you use the site.<br>
+      The stats will automatically update once every hour (60 minutes) whenever you use the site.<br>
     You can click on <strong style="color: #36a2eb">each</strong> <strong style="color: #ff6384;">of</strong> <strong style="color: #ff9f40;">the</strong> <strong style="color:#4bc0c0">six</strong> <strong style="color:#9966ff">colored</strong> <strong style="color:#ffcc56">boxes</strong> to toggle the graph.<br>
       Your preference will automatically be saved.
     </p>
