@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.2.4
+// @version      1.3.0
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -13,7 +13,50 @@
 // @require      https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js
 // @require      https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.30.1/moment.min.js
+// @require      https://unpkg.com/js-datepicker@5.18.2/dist/datepicker.min.js
 // ==/UserScript==
+
+const syncTrackingStartDate = async () => {
+  const statsTrackingSynced =
+    (await GM.getValue("statsTrackingSynced")) || false;
+
+  if (statsTrackingSynced === true) {
+    return;
+  }
+
+  const userStats = (await GM.getValue("userStats")) || {};
+  const communityStats = (await GM.getValue("communityStats")) || {};
+
+  const userStatsStartDate = Object.keys(userStats)[0];
+  const communityStatsStartDate = Object.keys(communityStats)[0];
+
+  const parsedUserStatsStartDate = new Date(userStatsStartDate);
+  const parsedCommunityStatsStartDate = new Date(communityStatsStartDate);
+
+  if (parsedCommunityStatsStartDate > parsedUserStatsStartDate) {
+    for (let key in userStats) {
+      if (new Date(key) < parsedCommunityStatsStartDate) {
+        delete userStats[key];
+      }
+    }
+  }
+
+  await GM.setValue("userStats", userStats);
+  await GM.setValue("statsTrackingSynced", true);
+};
+
+syncTrackingStartDate();
+
+const loadCSS = (url) => {
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.type = "text/css";
+  link.href = url;
+  document.head.appendChild(link);
+};
+
+// Load datepicker CSS
+loadCSS("https://unpkg.com/js-datepicker/dist/datepicker.min.css");
 
 Chart.defaults.color = "#FFF";
 Chart.defaults.borderColor = "rgba(255, 255, 255, 0.05)";
@@ -22,7 +65,12 @@ Chart.defaults.font.size = 14;
 let userStatsGraph;
 let communityStatsGraph;
 let savedPreference;
+
+let userStatsCanvas = document.createElement("canvas");
+let communityStatsCanvas = document.createElement("canvas");
+
 const currentDate = moment(new Date()).format("YYYY-MM-DD");
+const firstDateOfMonth = moment(new Date()).format("YYYY-MM-01");
 
 const bytesIn = (target) => {
   let exponent = 1;
@@ -88,6 +136,9 @@ const createUserStatsBox = () => {
     You can click on <strong style="color: #36a2eb">each</strong> <strong style="color: #ff6384;">of</strong> <strong style="color: #ff9f40;">the</strong> <strong style="color:#4bc0c0">six</strong> <strong style="color:#9966ff">colored</strong> <strong style="color:#ffcc56">boxes</strong> to toggle the graph.<br>
       Your preference will automatically be saved.
     </p>
+    <p>
+      You can also use the range picker below to see a certain period, which defaults to current month view.
+    </p>
 
     <div id="userStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
     <div id="communityStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
@@ -129,7 +180,15 @@ const getTimeUnit = (length) => {
   return { timeUnit, minUnit };
 };
 
-const trackingInfo = (period) => {
+const trackingInfo = (stats) => {
+  const period = [];
+
+  for (let key in stats) {
+    period.push(key);
+  }
+
+  period.sort((a, b) => new Date(a) - new Date(b));
+
   return {
     display: true,
     text: `Stats tracked since ${moment(period[0]).format("DD MMM YYYY")}`,
@@ -143,10 +202,118 @@ const trackingInfo = (period) => {
     },
   };
 };
-const buildUserStatsGraph = async (el) => {
-  const canvas = document.createElement("canvas");
 
-  const stats = await GM.getValue("userStats");
+const rebuildGraph = () => {
+  const startDate = moment(
+    new Date(document.getElementById("tracking-startdate").value)
+  ).format("YYYY-MM-DD");
+  const endDate = moment(
+    new Date(document.getElementById("tracking-enddate").value)
+  ).format("YYYY-MM-DD");
+
+  userStatsGraph.destroy();
+  communityStatsGraph.destroy();
+
+  buildUserStatsGraph(startDate, endDate);
+  buildCommunityStatsGraph(startDate, endDate);
+};
+
+const buildDatepicker = async () => {
+  const trackingRangeDiv = document.createElement("div");
+  trackingRangeDiv.style =
+    "display: flex; align-items: end; justify-content: center; margin-top: 20px;";
+
+  const startDiv = document.createElement("div");
+  startDiv.style = "margin-top: 10px;";
+
+  const startLabel = document.createElement("label");
+  startLabel.setAttribute("for", "tracking-startdate");
+  startLabel.innerText = "Start Date";
+  startLabel.style = "display: block; margin-bottom: 5px;";
+
+  const startDateInput = document.createElement("input");
+  startDateInput.id = "tracking-startdate";
+  startDateInput.placeholder = " Start";
+  startDateInput.value = moment(firstDateOfMonth).format("DD MMM YYYY");
+  startDateInput.readOnly = true;
+  startDateInput.style = "display: block; height: auto; padding: 5px 10px;";
+
+  startDiv.append(startLabel, startDateInput);
+
+  const endDiv = document.createElement("div");
+  endDiv.style = "margin: 0 10px;";
+
+  const endLabel = document.createElement("label");
+  endLabel.setAttribute("for", "tracking-startdate");
+  endLabel.innerText = "End Date";
+  endLabel.style = "display: block; margin-bottom: 5px;";
+
+  const endDateInput = document.createElement("input");
+  endDateInput.id = "tracking-enddate";
+  endDateInput.placeholder = " End";
+  endDateInput.value = moment(currentDate).format("DD MMM YYYY");
+  endDateInput.readOnly = true;
+  endDateInput.style = "display: block; height: auto; padding: 5px 10px;";
+
+  endDiv.append(endLabel, endDateInput);
+
+  const filterButton = document.createElement("button");
+  filterButton.id = "tracking-filter";
+  filterButton.innerText = "Filter";
+  filterButton.type = "button";
+  filterButton.style = "display: block; padding: 5px 10px; height: auto;";
+  filterButton.onclick = rebuildGraph;
+
+  trackingRangeDiv.append(startDiv, endDiv, filterButton);
+
+  const startUserStats = new Date(
+    Object.keys(await GM.getValue("userStats"))[0]
+  );
+
+  document
+    .getElementById("userStatsGraph")
+    .insertAdjacentElement("beforebegin", trackingRangeDiv);
+
+  datepicker("#tracking-startdate", {
+    id: 1,
+    formatter: (input, date) => {
+      input.value = moment(date).format("DD MMM YYYY");
+    },
+    maxDate: new Date(),
+    dateSelected: new Date(firstDateOfMonth),
+    onSelect: (instance, date) => {
+      if (date == undefined) {
+        instance.setDate(new Date(firstDateOfMonth), true);
+      }
+    },
+    minDate: startUserStats,
+  });
+
+  datepicker("#tracking-enddate", {
+    id: 1,
+    formatter: (input, date) => {
+      input.value = moment(date).format("DD MMM YYYY");
+    },
+    maxDate: new Date(),
+    dateSelected: new Date(),
+    onSelect: (instance, date) => {
+      if (date == undefined) {
+        instance.setDate(new Date(), true);
+      }
+    },
+  });
+};
+
+const buildUserStatsGraph = async (
+  start = firstDateOfMonth,
+  end = currentDate
+) => {
+  const stats = Object.fromEntries(
+    Object.entries(await GM.getValue("userStats")).filter(
+      ([date, _]) => date >= start && date <= end
+    )
+  );
+
   const lastUpdated = await GM.getValue("lastApiTimestamp");
 
   const period = [];
@@ -161,6 +328,10 @@ const buildUserStatsGraph = async (el) => {
   period.sort((a, b) => new Date(a) - new Date(b));
 
   period.forEach((date) => {
+    if (stats[date]["uploaded"] === null) stats[date]["uploaded"] = 0;
+    if (stats[date]["downloaded"] === null) stats[date]["downloaded"] = 0;
+    if (stats[date]["gold"] === null) starts[date]["gold"] = 0;
+
     uploaded.push(stats[date]["uploaded"]);
     downloaded.push(stats[date]["downloaded"]);
     gold.push(stats[date]["gold"]);
@@ -227,7 +398,7 @@ const buildUserStatsGraph = async (el) => {
 
   const defaultYAxis = savedPreference["Gold"] ? trafficAxis : goldAxis;
 
-  userStatsGraph = new Chart(canvas, {
+  userStatsGraph = new Chart(userStatsCanvas, {
     data: {
       datasets: [
         {
@@ -257,7 +428,7 @@ const buildUserStatsGraph = async (el) => {
           display: true,
           text: `Last Updated: ${parseTime(lastUpdated * 1000)}`,
         },
-        subtitle: trackingInfo(period),
+        subtitle: trackingInfo(await GM.getValue("userStats")),
         legend: {
           onClick: async (e, legendItem, legend) => {
             const index = legendItem.datasetIndex;
@@ -320,14 +491,19 @@ const buildUserStatsGraph = async (el) => {
       },
     ],
   });
-
-  el.appendChild(canvas);
 };
 
-const buildCommunityStatsGraph = async (el) => {
-  const canvas = document.createElement("canvas");
+const buildCommunityStatsGraph = async (
+  start = firstDateOfMonth,
+  end = currentDate
+) => {
   const lastUpdated = await GM.getValue("lastApiTimestamp");
-  const stats = await GM.getValue("communityStats");
+
+  const stats = Object.fromEntries(
+    Object.entries(await GM.getValue("communityStats")).filter(
+      ([date, _]) => date >= start && date <= end
+    )
+  );
 
   const period = [];
   const lines = [];
@@ -341,6 +517,10 @@ const buildCommunityStatsGraph = async (el) => {
   period.sort((a, b) => new Date(a) - new Date(b));
 
   period.forEach((date) => {
+    if (stats[date]["lines"] === null) stats[date]["lines"] = 0;
+    if (stats[date]["posts"] === null) stats[date]["posts"] = 0;
+    if (stats[date]["uploads"] === null) starts[date]["uploads"] = 0;
+
     lines.push(stats[date]["lines"]);
     posts.push(stats[date]["posts"]);
     uploads.push(stats[date]["uploads"]);
@@ -348,7 +528,7 @@ const buildCommunityStatsGraph = async (el) => {
 
   const { timeUnit, minUnit } = getTimeUnit(period.length);
 
-  communityStatsGraph = new Chart(canvas, {
+  communityStatsGraph = new Chart(communityStatsCanvas, {
     data: {
       datasets: [
         {
@@ -408,11 +588,6 @@ const buildCommunityStatsGraph = async (el) => {
             await GM.setValue("userPref", { ...savedPreference, ...userPref });
           },
         },
-        title: {
-          display: true,
-          text: `Last Updated: ${parseTime(lastUpdated * 1000)}`,
-        },
-        subtitle: trackingInfo(period),
         tooltip: {
           boxPadding: 5,
           callbacks: {
@@ -466,8 +641,6 @@ const buildCommunityStatsGraph = async (el) => {
       },
     ],
   });
-
-  el.appendChild(canvas);
 };
 
 const defaultPref = {
@@ -598,8 +771,13 @@ const defaultPref = {
   if (isMyProfile()) {
     const { userStatsEl, communityStatsEl } = createUserStatsBox();
 
-    buildUserStatsGraph(userStatsEl);
-    buildCommunityStatsGraph(communityStatsEl);
+    buildUserStatsGraph();
+    userStatsEl.appendChild(userStatsCanvas);
+
+    buildCommunityStatsGraph();
+    communityStatsEl.appendChild(communityStatsCanvas);
+
+    buildDatepicker();
 
     window.addEventListener("resize", function () {
       userStatsGraph.resize();
