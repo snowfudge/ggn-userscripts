@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.3.0
+// @version      1.3.1
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -70,7 +70,7 @@ let userStatsCanvas = document.createElement("canvas");
 let communityStatsCanvas = document.createElement("canvas");
 
 const currentDate = moment(new Date()).format("YYYY-MM-DD");
-const firstDateOfMonth = moment(new Date()).format("YYYY-MM-01");
+let startUserStats;
 
 const bytesIn = (target) => {
   let exponent = 1;
@@ -137,7 +137,7 @@ const createUserStatsBox = () => {
       Your preference will automatically be saved.
     </p>
     <p>
-      You can also use the range picker below to see a certain period, which defaults to current month view.
+      You can also use the range picker below to see a certain period (defaults full view).
     </p>
 
     <div id="userStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
@@ -234,7 +234,7 @@ const buildDatepicker = async () => {
   const startDateInput = document.createElement("input");
   startDateInput.id = "tracking-startdate";
   startDateInput.placeholder = " Start";
-  startDateInput.value = moment(firstDateOfMonth).format("DD MMM YYYY");
+  startDateInput.value = moment(startUserStats).format("DD MMM YYYY");
   startDateInput.readOnly = true;
   startDateInput.style = "display: block; height: auto; padding: 5px 10px;";
 
@@ -266,10 +266,6 @@ const buildDatepicker = async () => {
 
   trackingRangeDiv.append(startDiv, endDiv, filterButton);
 
-  const startUserStats = new Date(
-    Object.keys(await GM.getValue("userStats"))[0]
-  );
-
   document
     .getElementById("userStatsGraph")
     .insertAdjacentElement("beforebegin", trackingRangeDiv);
@@ -280,10 +276,10 @@ const buildDatepicker = async () => {
       input.value = moment(date).format("DD MMM YYYY");
     },
     maxDate: new Date(),
-    dateSelected: new Date(firstDateOfMonth),
+    dateSelected: new Date(startUserStats),
     onSelect: (instance, date) => {
       if (date == undefined) {
-        instance.setDate(new Date(firstDateOfMonth), true);
+        instance.setDate(new Date(startUserStats), true);
       }
     },
     minDate: startUserStats,
@@ -305,7 +301,7 @@ const buildDatepicker = async () => {
 };
 
 const buildUserStatsGraph = async (
-  start = firstDateOfMonth,
+  start = moment(startUserStats).format("YYYY-MM-DD"),
   end = currentDate
 ) => {
   const stats = Object.fromEntries(
@@ -494,7 +490,7 @@ const buildUserStatsGraph = async (
 };
 
 const buildCommunityStatsGraph = async (
-  start = firstDateOfMonth,
+  start = moment(startUserStats).format("YYYY-MM-DD"),
   end = currentDate
 ) => {
   const lastUpdated = await GM.getValue("lastApiTimestamp");
@@ -771,13 +767,15 @@ const defaultPref = {
   if (isMyProfile()) {
     const { userStatsEl, communityStatsEl } = createUserStatsBox();
 
+    startUserStats = new Date(Object.keys(await GM.getValue("userStats"))[0]);
+
+    buildDatepicker();
+
     buildUserStatsGraph();
     userStatsEl.appendChild(userStatsCanvas);
 
     buildCommunityStatsGraph();
     communityStatsEl.appendChild(communityStatsCanvas);
-
-    buildDatepicker();
 
     window.addEventListener("resize", function () {
       userStatsGraph.resize();
