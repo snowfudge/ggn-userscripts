@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.3.1
+// @version      1.3.2
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -137,7 +137,7 @@ const createUserStatsBox = () => {
       Your preference will automatically be saved.
     </p>
     <p>
-      You can also use the range picker below to see a certain period (defaults full view).
+      You can also use the range picker below to see a certain period.
     </p>
 
     <div id="userStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
