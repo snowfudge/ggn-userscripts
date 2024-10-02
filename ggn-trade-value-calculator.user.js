@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Trade Value Calculator
 // @namespace    https://gazellegames.net/
-// @version      2.0
+// @version      2.1
 // @description  Show Items' Values and Required Amount to Complete a Trade
 // @author       snowfudge
 // @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
@@ -34,7 +34,7 @@ const parseInfo = (me, other) => {
     $("#required-info").show();
   }
 
-  if (me > other) {
+  if (me >= other) {
     $("#required-info").css("background", "#1C1C1C");
     $(requiredAmount).text(
       `${parseNumber(me / 1.5)} to ${parseNumber(me * 1.5)}`
