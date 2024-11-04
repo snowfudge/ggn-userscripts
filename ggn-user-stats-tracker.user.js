@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.3.2
+// @version      1.3.3
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -326,7 +326,7 @@ const buildUserStatsGraph = async (
   period.forEach((date) => {
     if (stats[date]["uploaded"] === null) stats[date]["uploaded"] = 0;
     if (stats[date]["downloaded"] === null) stats[date]["downloaded"] = 0;
-    if (stats[date]["gold"] === null) starts[date]["gold"] = 0;
+    if (stats[date]["gold"] === null) stats[date]["gold"] = 0;
 
     uploaded.push(stats[date]["uploaded"]);
     downloaded.push(stats[date]["downloaded"]);
@@ -515,7 +515,7 @@ const buildCommunityStatsGraph = async (
   period.forEach((date) => {
     if (stats[date]["lines"] === null) stats[date]["lines"] = 0;
     if (stats[date]["posts"] === null) stats[date]["posts"] = 0;
-    if (stats[date]["uploads"] === null) starts[date]["uploads"] = 0;
+    if (stats[date]["uploads"] === null) stats[date]["uploads"] = 0;
 
     lines.push(stats[date]["lines"]);
     posts.push(stats[date]["posts"]);
