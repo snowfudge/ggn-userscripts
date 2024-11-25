@@ -6,7 +6,7 @@
 // @author       snowfudge
 // @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
 // @homepage     https://github.com/snowfudge/ggn-userscripts
-// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-item-manager-shortcut.user.js
+// @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-items-manager-shortcut.user.js
 // @match        https://gazellegames.net/shop.php*
 // @match        https://gazellegames.net/user.php*action=inventory*
 // @grant        none
