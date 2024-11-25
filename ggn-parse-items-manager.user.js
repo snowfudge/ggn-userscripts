@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         GGn Parse Items Manager
 // @namespace    https://gazellegames.net/
-// @version      2.0
+// @version      2.0.1
 // @description  Parses the item string on the toolbox and make it readable
 // @author       snowfudge
+// @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
 // @homepage     https://github.com/snowfudge/ggn-userscripts
 // @downloadURL  https://github.com/snowfudge/ggn-userscripts/raw/main/ggn-parse-items-manager.user.js
 // @match        https://gazellegames.net/tools.php?action=items&item=*
