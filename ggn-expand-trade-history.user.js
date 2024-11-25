@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         GGn Show All Trade History
+// @name         GGn Expand Trade History
 // @namespace    https://gazellegames.net/
-// @version      0.1.1
+// @version      1.0
 // @description  Automatically expand all hidden items in trade history
 // @author       snowfudge
 // @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
