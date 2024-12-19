@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Parse Items Manager
 // @namespace    https://gazellegames.net/
-// @version      2.0.1
+// @version      2.0.2
 // @description  Parses the item string on the toolbox and make it readable
 // @author       snowfudge
 // @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
@@ -256,40 +256,40 @@ const populateItemList = (items) => {
       li.style =
         "display: flex; flex-wrap: wrap; align-items: center; line-height: 2; margin: 10px 0; padding: 5px 0 5px 15px; background: rgba(0, 0, 0, 0.3); border-radius: 5px;";
 
-      if (items[i].endsWith("Gold")) {
-        li.innerHTML = `${items[i]} <img style="max-height: 35px; display: inline-block; margin: 0 3px;" src="static/common/items/Items/Buff/coin_medium.png" />`;
-      } else {
-        li.innerHTML = items[i]
-          .replace(
-            /\|\|\(/g,
-            `||<div style="display: flex; align-items: center;">(`
-          ) // Ensures || followed by ( starts on a new line just for readability
-          .replace(
-            /\|\|/g,
-            '<span style="display: inline-block; font-size: 15px; margin: 0 3px; color: #f73b4e;">OR</span>'
-          )
-          .replace(
-            /\&\&/g,
-            '<span style="display: inline-block; font-size: 15px; margin: 0 3px; color: #18ed18;">AND</span>'
-          )
-          .replace(
-            /\(/g,
-            '<span style="font-size: 22px; font-weight: bold; display: inline-block; margin: 0 5px 0 0;">(</span>'
-          )
-          .replace(
-            /\)/g,
-            '<span style="font-size: 22px; font-weight: bold; display: inline-block; margin: 0 5px;">)</div></span>'
-          )
-          .replace(/\d{5}/g, (match) => {
-            const itemId = Number(match); // Without leading zero
-            const item = itemList[itemId];
+      li.innerHTML = items[i]
+        .replace(
+          /\|\|\(/g,
+          `||<div style="display: flex; align-items: center;">(`
+        ) // Ensures || followed by ( starts on a new line just for readability
+        .replace(
+          /\|\|/g,
+          '<span style="display: inline-block; font-size: 15px; margin: 0 3px; color: #f73b4e;">OR</span>'
+        )
+        .replace(
+          /\&\&/g,
+          '<span style="display: inline-block; font-size: 15px; margin: 0 3px; color: #18ed18;">AND</span>'
+        )
+        .replace(
+          /\(/g,
+          '<span style="font-size: 22px; font-weight: bold; display: inline-block; margin: 0 5px 0 0;">(</span>'
+        )
+        .replace(
+          /\)/g,
+          '<span style="font-size: 22px; font-weight: bold; display: inline-block; margin: 0 5px;">)</div></span>'
+        )
+        .replace(/\d{5}/g, (match) => {
+          const itemId = Number(match); // Without leading zero
+          const item = itemList[itemId];
 
-            return `<a class="parseLink" style="display: flex; align-items: center;" target="_blank" href="shop.php?ItemID=${itemId}">
+          return `<a class="parseLink" style="display: flex; align-items: center;" target="_blank" href="shop.php?ItemID=${itemId}">
     ${item.name}
     <img src="${item.image}" style="max-height: 35px; display: inline-block; margin: 0 3px;" />
     </a>`;
-          });
-      }
+        })
+        .replace(/\d+\sGold/g, (match) => {
+          // Add icon for gold
+          return `${match} <img style="max-height: 35px; display: inline-block; margin: 0 3px;" src="static/common/items/Items/Buff/coin_medium.png" />`;
+        });
 
       ul.appendChild(li);
     }
