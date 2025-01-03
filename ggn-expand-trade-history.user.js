@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Expand Trade History
 // @namespace    https://gazellegames.net/
-// @version      1.0
+// @version      1.1
 // @description  Automatically expand all hidden items in trade history
 // @author       snowfudge
 // @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
@@ -13,5 +13,6 @@
 (() => {
   ("use strict");
 
-  $("#trades_table li > a").trigger("click");
+  $("#trades_table li > a").closest("li").remove();
+  $("#trades_table div.hidden").removeClass("hidden");
 })();
