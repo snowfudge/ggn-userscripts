@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Parse Items Manager
 // @namespace    https://gazellegames.net/
-// @version      2.0.2
+// @version      2.0.3
 // @description  Parses the item string on the toolbox and make it readable
 // @author       snowfudge
 // @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
@@ -350,6 +350,11 @@ $("#item_builder").on("click", "#default_chance", function () {
   $("#reparse_chance").trigger("click");
 });
 
+$("#item_builder").on("click", "#max_chance", function () {
+  $("#chance_input").val("10.0");
+  $("#reparse_chance").trigger("click");
+});
+
 $("#item_builder").on("click", "#reparse_chance", function () {
   const items = itemsPreChance.map((item) =>
     parseChance(item, $("#chance_input").val())
@@ -380,7 +385,8 @@ const createItemInfoSection = () => {
           <input id="chance_input" style="width: 50px;" />
           <button type="button" id="reparse_chance" style="margin: 0 5px;">Calculate</button>
           <button type="button" id="my_chance" style="margin-right: 5px;">My chance</button>
-          <button type="button" id="default_chance">Default</button>
+          <button type="button" id="default_chance">Default (1.0)</button>
+          <button type="button" id="max_chance">Max (10.0)</button>
         </td>
       </tr>
       <tr id="item_type_pet" style="display: none;">
