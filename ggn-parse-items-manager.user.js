@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn Parse Items Manager
 // @namespace    https://gazellegames.net/
-// @version      2.0.3
+// @version      2.1
 // @description  Parses the item string on the toolbox and make it readable
 // @author       snowfudge
 // @icon         https://icons.duckduckgo.com/ip3/gazellegames.net.ico
@@ -20,7 +20,7 @@ let parentSection;
 let userChanceBuff;
 let itemsPreChance;
 
-const apiLimitInSeconds = 12;
+const apiLimitInSeconds = 5;
 const apiEndpoint = "https://gazellegames.net/api.php?request=items";
 const apiOptions = {
   method: "GET",
@@ -54,58 +54,53 @@ const parseGoldAmount = (string) => {
   });
 };
 
-// If items doesn't end with multiplier, we assume it's *00001
-const checkForIncompleteParantheses = (string) => {
-  const regex = /\*\d{5}$/;
-  if (!regex.test(string)) {
-    return string + "*00001";
-  }
-  return string;
-};
-
 // Show the chance in %
 const parseChance = (string, chance) => {
   string = string.replace(/\*\d{5}/g, (match) => {
+
     const baseMultiplier = parseInt(match.slice(1), 10);
     const percentage =
       chance > baseMultiplier
         ? 100
-        : ((chance / baseMultiplier) * 100).toFixed(2);
+        : parseFloat(((chance / baseMultiplier) * 100).toFixed(3))
 
-    let percentFormat;
-
-    // We use toString() so we can check if it ends with .00
-    if (percentage.toString().endsWith(".00")) {
-      percentFormat = parseInt(percentage, 10);
-    } else {
-      percentFormat = percentage;
-    }
-
-    return percentFormat == "100"
+    return percentage === 100
       ? ""
-      : `<span style="display: inline-block; margin-left: 3px; font-size: 14px; color: #f7f307;">${percentFormat}%</span>`;
+      : `<span style="display: inline-block; margin-left: 3px; font-size: 14px; color: #f7f307;">${percentage}%</span>`;
   });
 
   return string;
 };
 
+const parseNewLines = (str) => {
+  let depth = 0;
+  let result = "";
+
+  for (let i = 0; i < str.length; i++) {
+    if (str[i] === "(") depth++;
+    if (str[i] === ")") depth--;
+
+    if (str[i] === "&" && str[i + 1] === "&" && depth === 0) {
+      result += "\n";
+      i++;
+    } else {
+      result += str[i];
+    }
+  }
+
+  return result;
+}
+
 // Clean up string and parse into array
 const parseRawDataIntoArray = (string) => {
-  let parsedString = string
-    .replace(/\/\*[\s\S]*?\*\//g, "") // Remove /* */ comments
-    .replace(/ /g, "") // Remove double space
-    //.replace(/&&/g, "\n") // Replace && with new line
-    .replace(/\([^)]*\)|&&/g, (match) => {
-      // If the match is a full parenthesis group, return it unchanged
-      if (match.startsWith("(") && match.endsWith(")")) {
-        return match;
-      }
-      // Otherwise, replace && with a new line
-      return "\n";
-    })
-    .replace(/\n\s*\n/g, "\n") // Replace any two consecutive new lines with a single new line
-    .replace(/\|\|\n/, "||") // Replace || followed by new line with ||
-    .split("\n"); // Split string to array for every new line
+
+  let parsedString = string.replace(/\/\*[\s\S]*?\*\//g, "") // Remove /* */ comments
+  .replace(/\s+/g, " ") // remove all whitespace and turn into single
+
+  parsedString = parseNewLines(parsedString)
+  .replace(/\n\s*\n/g, "\n") // Replace any two consecutive new lines with a single new line
+  .replace(/\|\|\n/, "||") // Replace || followed by new line with ||
+  .split("\n"); // Split string to array for every new line
 
   return parsedString;
 };
@@ -115,13 +110,16 @@ const parseItemRange = (array) => {
   const itemIds = [];
 
   array.forEach((val) => {
+    const str = val.trim();
     const pattern = /.*\d{5}-\d{5}.*/; // Check for item range
-    const hasRange = pattern.test(val);
+    const hasRange = pattern.test(str);
 
     if (hasRange) {
       const regex = /.*(\d{5})-(\d{5}).*/;
-      const match = val.match(regex);
-      const chance = val.slice(-6);
+      const match = str.match(regex);
+      
+      const chanceMatch = str.match(/\*(\d+)/);
+      const chance = chanceMatch[0]
 
       const start = parseInt(match[1], 10);
       const end = parseInt(match[2], 10);
@@ -131,9 +129,9 @@ const parseItemRange = (array) => {
         itemRange.push(i.toString().padStart(5, "0"));
       }
 
-      const string = itemRange.map((rangeId) => `${rangeId}*00001`).join("||");
+      const itemString = itemRange.map((rangeId) => `${rangeId}*00001`).join("||");
+      itemIds.push(`(${itemString})${chance}`);
 
-      itemIds.push(`(${string})${chance}`);
     } else {
       itemIds.push(val);
     }
@@ -172,11 +170,12 @@ const parseData = async () => {
     return;
   }
 
+  $("button#parse_data").prop('disabled', true).html("Loading..").css('cursor', 'not-allowed');
+
   let items = parseRawDataIntoArray(itemString);
 
   items = parseItemRange(items);
   items = items.map(parseGoldAmount);
-  items = items.map(checkForIncompleteParantheses);
 
   // Save it to the global variable!
   itemsPreChance = items;
@@ -208,8 +207,6 @@ const parseData = async () => {
 
   GM.setValue("lastApiTimestamp", Date.now() / 1000);
 
-  notification.close();
-
   const { response } = await getItemData.json();
 
   itemIds.forEach((id) => {
@@ -240,8 +237,11 @@ const parseData = async () => {
     items = itemsPreChance.map((item) => parseChance(item, 1.0));
   }
 
-  $(".parsed_data").show();
+  $(".item_list").show();
   populateItemList(items);
+
+  notification.close();
+  $("button#parse_data").hide();
 };
 
 // Where the REAL magic happens!
@@ -373,7 +373,7 @@ $("#item_builder").on("change", "#pet_level", function () {
 
 // Template for the parsed content
 const createItemInfoSection = () => {
-  const html = `<tbody class="parsed_data" style="display: none;">
+  const html = `<tbody class="item_list" style="display: none;">
       <tr class="colhead">
         <td colspan="4">Parsed Content
           <a href="#" onclick="$('#parsed_item_content').toggle(); this.innerHTML = (this.innerHTML == '(Hide)' ? '(Show)' : '(Hide)'); return false">(Hide)</a>
@@ -409,7 +409,7 @@ const createItemInfoSection = () => {
           </select>
         </td>
     </tbody>
-    <tbody class="parsed_data" style="display: none;" id="parsed_item_content">
+    <tbody class="item_list" style="display: none;" id="parsed_item_content">
       <tr>
         <td colspan="4" id="parsed_item_data">
           <ul id="parsed_content" style="list-style: none; padding: 0; margin: 20px 0;"></ul>
