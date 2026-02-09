@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.4.0
+// @version      1.4.1
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -453,6 +453,8 @@ const buildUserStatsGraph = async (
   end = currentDate
 ) => {
 
+  savedPreference = (await GM.getValue("userPref")) || defaultPref;
+
   let stats = Object.fromEntries(
     Object.entries(await GM.getValue("userStats")).filter(
       ([date]) => date >= start && date <= end,
@@ -676,6 +678,8 @@ const buildCommunityStatsGraph = async (
   end = currentDate
 ) => {
   const lastUpdated = await GM.getValue("lastApiTimestamp");
+
+  savedPreference = (await GM.getValue("userPref")) || defaultPref;
 
   let stats = Object.fromEntries(
     Object.entries(await GM.getValue("communityStats")).filter(
