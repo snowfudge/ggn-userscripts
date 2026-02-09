@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.4.1
+// @version      1.4.2
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -71,6 +71,8 @@ let communityStatsCanvas = document.createElement("canvas");
 
 const currentDate = moment(new Date()).format("YYYY-MM-DD");
 let startUserStats;
+
+let startDatepicker, endDatepicker;
 
 const bytesIn = (target) => {
   let exponent = 1;
@@ -144,6 +146,7 @@ const createUserStatsBox = () => {
       <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;">
         <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="7d">7 days</button>
         <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="30d">30 days</button>
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="60d">60 days</button>
         <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="90d">90 days</button>
         <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="1y">1 year</button>
       </div>
@@ -167,7 +170,6 @@ const createUserStatsBox = () => {
     .querySelector(".head")
     .addEventListener("click", toggleUserStatsDiv);
 
-
   document.addEventListener("click", async (e) => {
     const btn = e.target.closest("#dateShortcutButtons button");
     if (!btn) return;
@@ -180,28 +182,32 @@ const createUserStatsBox = () => {
 
     switch (range) {
       case "7d":
-        start = today.clone().subtract(6, "days");
+        start = today.clone().subtract(7, "days");
         break;
 
       case "30d":
-        start = today.clone().subtract(29, "days");
+        start = today.clone().subtract(30, "days");
+        break;
+
+      case "60d":
+        start = today.clone().subtract(60, "days");
         break;
 
       case "90d":
-        start = today.clone().subtract(89, "days");
+        start = today.clone().subtract(90, "days");
         break;
 
       case "1y":
-        start = today.clone().subtract(1, "year").add(1, "day");
+        start = today.clone().subtract(1, "year");
         break;
 
       case "thisMonth":
-          start = today.clone().startOf("month");
+        start = today.clone().startOf("month");
         break;
 
       case "lastMonth":
-          start = today.clone().subtract(1, "month").startOf("month");
-          end = today.clone().subtract(1, "month").endOf("month");
+        start = today.clone().subtract(1, "month").startOf("month");
+        end = today.clone().subtract(1, "month").endOf("month");
         break;
 
       case "ytd":
@@ -213,14 +219,11 @@ const createUserStatsBox = () => {
         break;
     }
 
-    document.querySelector("#tracking-startdate").value =
-      start.format("DD MMM YYYY");
-    document.querySelector("#tracking-enddate").value =
-      end.format("DD MMM YYYY");
+    startDatepicker.setDate(start.toDate(), true);
+    endDatepicker.setDate(end.toDate(), true);
 
     rebuildGraph();
   });
-
 
   return {
     userStatsEl: document.getElementById("userStatsGraph"),
@@ -275,10 +278,10 @@ const trackingInfo = (stats) => {
 
 const rebuildGraph = () => {
   const startDate = moment(
-    new Date(document.getElementById("tracking-startdate").value)
+    new Date(document.getElementById("tracking-startdate").value),
   ).format("YYYY-MM-DD");
   const endDate = moment(
-    new Date(document.getElementById("tracking-enddate").value)
+    new Date(document.getElementById("tracking-enddate").value),
   ).format("YYYY-MM-DD");
 
   userStatsGraph.destroy();
@@ -340,7 +343,7 @@ const buildDatepicker = async () => {
     .getElementById("userStatsGraph")
     .insertAdjacentElement("beforebegin", trackingRangeDiv);
 
-  datepicker("#tracking-startdate", {
+  startDatepicker = datepicker("#tracking-startdate", {
     id: 1,
     formatter: (input, date) => {
       input.value = moment(date).format("DD MMM YYYY");
@@ -355,7 +358,7 @@ const buildDatepicker = async () => {
     minDate: startUserStats,
   });
 
-  datepicker("#tracking-enddate", {
+  endDatepicker = datepicker("#tracking-enddate", {
     id: 1,
     formatter: (input, date) => {
       input.value = moment(date).format("DD MMM YYYY");
@@ -370,8 +373,6 @@ const buildDatepicker = async () => {
   });
 };
 
-
-
 const aggregationMode = (start, end) => {
   const days = Math.floor((new Date(end) - new Date(start)) / 86400000);
 
@@ -379,7 +380,7 @@ const aggregationMode = (start, end) => {
   if (days <= 180) return "3day";
   if (days <= 420) return "weekly";
   return "monthly";
-}
+};
 
 const aggregateStats = (stats, start, end) => {
   const mode = aggregationMode(start, end);
@@ -413,7 +414,7 @@ const aggregateStats = (stats, start, end) => {
   }
 
   return Object.fromEntries([...bucket.values()].map((e) => [e.key, e.value]));
-}
+};
 
 const getTimeScaleConfig = (mode) => {
   switch (mode) {
@@ -442,17 +443,12 @@ const getTimeScaleConfig = (mode) => {
         displayFormats: { month: "MMM yyyy" },
       };
   }
-}
-
-
-
-
+};
 
 const buildUserStatsGraph = async (
   start = moment(startUserStats).format("YYYY-MM-DD"),
-  end = currentDate
+  end = currentDate,
 ) => {
-
   savedPreference = (await GM.getValue("userPref")) || defaultPref;
 
   let stats = Object.fromEntries(
@@ -469,7 +465,7 @@ const buildUserStatsGraph = async (
   const uploaded = [];
   const downloaded = [];
   const gold = [];
-  const hourlyGold = []
+  const hourlyGold = [];
 
   for (let key in stats) {
     period.push(key);
@@ -542,22 +538,23 @@ const buildUserStatsGraph = async (
       3 => GPH
     */
 
-    for (x = 0 ; x < 4; x++) {
-      chart.hide(x)
+    for (x = 0; x < 4; x++) {
+      chart.hide(x);
     }
 
     chart.show(index);
 
     if (index <= 1) chart.options.scales.y = trafficAxis;
-    else if (index === 2) chart.options.scales.y = goldAxis
-    else if (index === 3) chart.options.scales.y = gphAxis
+    else if (index === 2) chart.options.scales.y = goldAxis;
+    else if (index === 3) chart.options.scales.y = gphAxis;
   };
 
   let defaultYAxis;
 
-  if (!savedPreference["Upload"] || !savedPreference["Download"]) defaultYAxis = trafficAxis;
+  if (!savedPreference["Upload"] || !savedPreference["Download"])
+    defaultYAxis = trafficAxis;
   else if (!savedPreference["GPH"]) defaultYAxis = gphAxis;
-  else if (!savedPreference["Gold"]) defaultYAxis = goldAxis
+  else if (!savedPreference["Gold"]) defaultYAxis = goldAxis;
 
   const mode = aggregationMode(start, end);
 
@@ -624,8 +621,7 @@ const buildUserStatsGraph = async (
             title: (ctx) => {
               const date = moment(ctx[0].parsed.x);
 
-              if (mode === "daily")
-                return date.format("DD MMM YYYY - hh:mm A");
+              if (mode === "daily") return date.format("DD MMM YYYY - hh:mm A");
 
               if (mode === "3day")
                 return `${date.clone().subtract(2, "days").format("DD MMM YYYY")} – ${date.format("DD MMM YYYY")}`;
@@ -633,8 +629,7 @@ const buildUserStatsGraph = async (
               if (mode === "weekly")
                 return `${date.clone().startOf("week").format("DD MMM YYYY")} – ${date.clone().endOf("week").format("DD MMM YYYY")}`;
 
-              if (mode === "monthly")
-                return date.format("MMMM YYYY");
+              if (mode === "monthly") return date.format("MMMM YYYY");
             },
           },
         },
@@ -675,7 +670,7 @@ const buildUserStatsGraph = async (
 
 const buildCommunityStatsGraph = async (
   start = moment(startUserStats).format("YYYY-MM-DD"),
-  end = currentDate
+  end = currentDate,
 ) => {
   const lastUpdated = await GM.getValue("lastApiTimestamp");
 
@@ -683,8 +678,8 @@ const buildCommunityStatsGraph = async (
 
   let stats = Object.fromEntries(
     Object.entries(await GM.getValue("communityStats")).filter(
-      ([date, _]) => date >= start && date <= end
-    )
+      ([date, _]) => date >= start && date <= end,
+    ),
   );
 
   stats = aggregateStats(stats, start, end);
@@ -858,7 +853,7 @@ const defaultPref = {
   if (!apiKey) {
     if (
       !(apiKey = prompt(
-        "Please enter an API key with the 'User' permission to use this script."
+        "Please enter an API key with the 'User' permission to use this script.",
       )?.trim())
     ) {
       return;
@@ -907,7 +902,7 @@ const defaultPref = {
 
     const apiCall = await fetch(
       `${endpoint}?request=user&id=${userId}`,
-      options
+      options,
     );
 
     if (apiCall.status === 401) {
@@ -951,7 +946,7 @@ const defaultPref = {
       document
         .getElementById("stats_gold")
         .querySelector(".tooltip")
-        .textContent.replace(/,/g, "")
+        .textContent.replace(/,/g, ""),
     );
     currentUserStats[currentDate]["gold"] = currentGold;
 
