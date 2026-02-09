@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         GGn User Stats Tracker
 // @namespace    https://gazellegames.net/
-// @version      1.3.3
+// @version      1.4.0
 // @description  Show a graph of your user and community stats on your profile
 // @author       snowfudge
 // @homepage     https://github.com/snowfudge/ggn-userscripts
@@ -133,12 +133,27 @@ const createUserStatsBox = () => {
   <div class="pad" id="userStats">
     <p>
       The stats will automatically update once every hour (60 minutes) whenever you use the site.<br>
-    You can click on <strong style="color: #36a2eb">each</strong> <strong style="color: #ff6384;">of</strong> <strong style="color: #ff9f40;">the</strong> <strong style="color:#4bc0c0">six</strong> <strong style="color:#9966ff">colored</strong> <strong style="color:#ffcc56">boxes</strong> to toggle the graph.<br>
+    You can click <strong style="color: #36a2eb">on</strong> <strong style="color: #ff6384;">each</strong> <strong style="color: #ff9f40;">of</strong> <strong style="color:#ffcc56;">the</strong> <strong style="color:#4bc0c0;">seven</strong> <strong style="color:#9966ff;">colored</strong> <strong style="color: #dc90e5;">boxes</strong> to toggle the graph.<br>
       Your preference will automatically be saved.
     </p>
     <p>
       You can also use the range picker below to see a certain period.
     </p>
+
+    <div id="dateShortcutButtons" style="margin-top: 25px;">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px;">
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="7d">7 days</button>
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="30d">30 days</button>
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="90d">90 days</button>
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="1y">1 year</button>
+      </div>
+      <div style="display: flex; align-items: center; justify-content: center; gap: 10px;">
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="thisMonth">This month</button>
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="lastMonth">Last month</button>
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="ytd">Year to date</button>
+        <button style="padding: 5px 10px; height: auto; display: block;" type="button" data-range="all">All</button>
+      </div>
+    </div>
 
     <div id="userStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
     <div id="communityStatsGraph" style="width: 95%; margin: 25px auto 0;"></div>
@@ -151,6 +166,61 @@ const createUserStatsBox = () => {
     .getElementById("userStatsDiv")
     .querySelector(".head")
     .addEventListener("click", toggleUserStatsDiv);
+
+
+  document.addEventListener("click", async (e) => {
+    const btn = e.target.closest("#dateShortcutButtons button");
+    if (!btn) return;
+
+    const range = btn.dataset.range;
+    const today = moment();
+    let end = today;
+
+    let start;
+
+    switch (range) {
+      case "7d":
+        start = today.clone().subtract(6, "days");
+        break;
+
+      case "30d":
+        start = today.clone().subtract(29, "days");
+        break;
+
+      case "90d":
+        start = today.clone().subtract(89, "days");
+        break;
+
+      case "1y":
+        start = today.clone().subtract(1, "year").add(1, "day");
+        break;
+
+      case "thisMonth":
+          start = today.clone().startOf("month");
+        break;
+
+      case "lastMonth":
+          start = today.clone().subtract(1, "month").startOf("month");
+          end = today.clone().subtract(1, "month").endOf("month");
+        break;
+
+      case "ytd":
+        start = today.clone().startOf("year");
+        break;
+
+      case "all":
+        start = moment(startUserStats);
+        break;
+    }
+
+    document.querySelector("#tracking-startdate").value =
+      start.format("DD MMM YYYY");
+    document.querySelector("#tracking-enddate").value =
+      end.format("DD MMM YYYY");
+
+    rebuildGraph();
+  });
+
 
   return {
     userStatsEl: document.getElementById("userStatsGraph"),
@@ -300,15 +370,96 @@ const buildDatepicker = async () => {
   });
 };
 
+
+
+const aggregationMode = (start, end) => {
+  const days = Math.floor((new Date(end) - new Date(start)) / 86400000);
+
+  if (days <= 60) return "daily";
+  if (days <= 180) return "3day";
+  if (days <= 420) return "weekly";
+  return "monthly";
+}
+
+const aggregateStats = (stats, start, end) => {
+  const mode = aggregationMode(start, end);
+  if (mode === "daily") return stats;
+
+  const entries = Object.entries(stats)
+    .map(([date, value]) => ({ date: new Date(date), key: date, value }))
+    .sort((a, b) => a.date - b.date);
+
+  const bucket = new Map();
+
+  for (const e of entries) {
+    const y = e.date.getFullYear();
+    const m = e.date.getMonth();
+    const d = e.date.getDate();
+
+    let key;
+
+    if (mode === "3day") {
+      const block = Math.floor((d - 1) / 3);
+      key = `${y}-${m}-d${block}`;
+    } else if (mode === "weekly") {
+      const firstDay = new Date(y, 0, 1);
+      const week = Math.floor((e.date - firstDay) / 604800000);
+      key = `${y}-w${week}`;
+    } else {
+      key = `${y}-${m}`;
+    }
+
+    bucket.set(key, e);
+  }
+
+  return Object.fromEntries([...bucket.values()].map((e) => [e.key, e.value]));
+}
+
+const getTimeScaleConfig = (mode) => {
+  switch (mode) {
+    case "daily":
+      return {
+        unit: "day",
+        displayFormats: { day: "dd MMM" },
+      };
+
+    case "3day":
+      return {
+        unit: "day",
+        stepSize: 3,
+        displayFormats: { day: "dd MMM" },
+      };
+
+    case "weekly":
+      return {
+        unit: "week",
+        displayFormats: { week: "dd MMM" },
+      };
+
+    case "monthly":
+      return {
+        unit: "month",
+        displayFormats: { month: "MMM yyyy" },
+      };
+  }
+}
+
+
+
+
+
 const buildUserStatsGraph = async (
   start = moment(startUserStats).format("YYYY-MM-DD"),
   end = currentDate
 ) => {
-  const stats = Object.fromEntries(
+
+  let stats = Object.fromEntries(
     Object.entries(await GM.getValue("userStats")).filter(
-      ([date, _]) => date >= start && date <= end
-    )
+      ([date]) => date >= start && date <= end,
+    ),
   );
+
+  stats = aggregateStats(stats, start, end);
 
   const lastUpdated = await GM.getValue("lastApiTimestamp");
 
@@ -316,6 +467,7 @@ const buildUserStatsGraph = async (
   const uploaded = [];
   const downloaded = [];
   const gold = [];
+  const hourlyGold = []
 
   for (let key in stats) {
     period.push(key);
@@ -327,10 +479,12 @@ const buildUserStatsGraph = async (
     if (stats[date]["uploaded"] === null) stats[date]["uploaded"] = 0;
     if (stats[date]["downloaded"] === null) stats[date]["downloaded"] = 0;
     if (stats[date]["gold"] === null) stats[date]["gold"] = 0;
+    if (stats[date]["hourlyGold"] === null) stats[date]["hourlyGold"] = 0;
 
     uploaded.push(stats[date]["uploaded"]);
     downloaded.push(stats[date]["downloaded"]);
     gold.push(stats[date]["gold"]);
+    hourlyGold.push(stats[date]["hourlyGold"]);
   });
 
   const { timeUnit, minUnit } = getTimeUnit(period.length);
@@ -339,6 +493,19 @@ const buildUserStatsGraph = async (
     title: {
       display: true,
       text: "Gold",
+      font: {
+        size: 15,
+      },
+    },
+    ticks: {
+      padding: 15,
+    },
+  };
+
+  const gphAxis = {
+    title: {
+      display: true,
+      text: "GPH",
       font: {
         size: 15,
       },
@@ -365,34 +532,32 @@ const buildUserStatsGraph = async (
   };
 
   const toggleChart = (index, chart) => {
-    if (index === 2) {
-      if (chart.isDatasetVisible(2)) {
-        chart.hide(2); // Hide Gold
-      } else {
-        // Show Gold
-        chart.show(2);
+    /*
+      Index:
+      0 => Upload
+      1 => Download
+      2 => Gold
+      3 => GPH
+    */
 
-        // Hide Traffic
-        chart.hide(0);
-        chart.hide(1);
-
-        chart.options.scales.y = goldAxis;
-      }
-    } else {
-      if (chart.isDatasetVisible(index)) {
-        chart.hide(index); // Hide Traffic
-      } else {
-        // Show Traffic
-        chart.show(index);
-
-        // Hide Gold
-        chart.hide(2);
-        chart.options.scales.y = trafficAxis;
-      }
+    for (x = 0 ; x < 4; x++) {
+      chart.hide(x)
     }
+
+    chart.show(index);
+
+    if (index <= 1) chart.options.scales.y = trafficAxis;
+    else if (index === 2) chart.options.scales.y = goldAxis
+    else if (index === 3) chart.options.scales.y = gphAxis
   };
 
-  const defaultYAxis = savedPreference["Gold"] ? trafficAxis : goldAxis;
+  let defaultYAxis;
+
+  if (!savedPreference["Upload"] || !savedPreference["Download"]) defaultYAxis = trafficAxis;
+  else if (!savedPreference["GPH"]) defaultYAxis = gphAxis;
+  else if (!savedPreference["Gold"]) defaultYAxis = goldAxis
+
+  const mode = aggregationMode(start, end);
 
   userStatsGraph = new Chart(userStatsCanvas, {
     data: {
@@ -414,6 +579,12 @@ const buildUserStatsGraph = async (
           label: "Gold",
           data: gold,
           hidden: savedPreference["Gold"],
+        },
+        {
+          type: "line",
+          label: "GPH",
+          data: hourlyGold,
+          hidden: savedPreference["GPH"],
         },
       ],
       labels: period,
@@ -449,8 +620,19 @@ const buildUserStatsGraph = async (
               else return ctx.formattedValue;
             },
             title: (ctx) => {
-              const day = moment(ctx[0].parsed.x).format("YYYY-MM-DD");
-              return parseTime(new Date(stats[day]["last_updated"]).getTime());
+              const date = moment(ctx[0].parsed.x);
+
+              if (mode === "daily")
+                return date.format("DD MMM YYYY - hh:mm A");
+
+              if (mode === "3day")
+                return `${date.clone().subtract(2, "days").format("DD MMM YYYY")} – ${date.format("DD MMM YYYY")}`;
+
+              if (mode === "weekly")
+                return `${date.clone().startOf("week").format("DD MMM YYYY")} – ${date.clone().endOf("week").format("DD MMM YYYY")}`;
+
+              if (mode === "monthly")
+                return date.format("MMMM YYYY");
             },
           },
         },
@@ -495,11 +677,13 @@ const buildCommunityStatsGraph = async (
 ) => {
   const lastUpdated = await GM.getValue("lastApiTimestamp");
 
-  const stats = Object.fromEntries(
+  let stats = Object.fromEntries(
     Object.entries(await GM.getValue("communityStats")).filter(
       ([date, _]) => date >= start && date <= end
     )
   );
+
+  stats = aggregateStats(stats, start, end);
 
   const period = [];
   const lines = [];
@@ -524,6 +708,8 @@ const buildCommunityStatsGraph = async (
 
   const { timeUnit, minUnit } = getTimeUnit(period.length);
 
+  const mode = aggregationMode(start, end);
+
   communityStatsGraph = new Chart(communityStatsCanvas, {
     data: {
       datasets: [
@@ -547,8 +733,8 @@ const buildCommunityStatsGraph = async (
           type: "line",
           label: "Torrent Uploads",
           data: uploads,
-          borderColor: "rgb(255, 205, 86)",
-          backgroundColor: "rgba(255, 205, 86,0.5)",
+          borderColor: "#dc90e5",
+          backgroundColor: "rgba(220, 144, 229, 0.5)",
           hidden: savedPreference["Torrent Uploads"],
         },
       ],
@@ -588,8 +774,17 @@ const buildCommunityStatsGraph = async (
           boxPadding: 5,
           callbacks: {
             title: (ctx) => {
-              const day = moment(ctx[0].parsed.x).format("YYYY-MM-DD");
-              return parseTime(new Date(stats[day]["last_updated"]).getTime());
+              const date = moment(ctx[0].parsed.x);
+
+              if (mode === "daily") return date.format("DD MMM YYYY - hh:mm A");
+
+              if (mode === "3day")
+                return `${date.clone().subtract(2, "days").format("DD MMM YYYY")} – ${date.format("DD MMM YYYY")}`;
+
+              if (mode === "weekly")
+                return `${date.clone().startOf("week").format("DD MMM YYYY")} – ${date.clone().endOf("week").format("DD MMM YYYY")}`;
+
+              if (mode === "monthly") return date.format("MMMM YYYY");
             },
           },
         },
@@ -639,10 +834,12 @@ const buildCommunityStatsGraph = async (
   });
 };
 
+// Default hidden. true -> hidden, false -> shown
 const defaultPref = {
-  Upload: true,
-  Download: true,
-  Gold: false,
+  Upload: false,
+  Download: false,
+  Gold: true,
+  GPH: true,
   "IRC Lines": false,
   "Forum Posts": true,
   "Torrent Uploads": true,
@@ -736,6 +933,9 @@ const defaultPref = {
     currentUserStats[currentDate]["uploaded"] = stats.uploaded;
     currentUserStats[currentDate]["downloaded"] = stats.downloaded;
     currentUserStats[currentDate]["last_updated"] = currentTime;
+
+    // Exception just so it looks nice. GPH shouldn't fall under community stats
+    currentUserStats[currentDate]["hourlyGold"] = community.hourlyGold;
 
     currentCommunityStats[currentDate] = {};
     currentCommunityStats[currentDate]["lines"] = community.ircLines;
